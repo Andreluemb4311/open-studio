@@ -1,18 +1,16 @@
 <div align="center">
 
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=FF4DA6&height=200&text=MiniMax%20Content%20Studio&fontSize=42&fontColor=FFFFFF&animation=fadeIn&fontAlignY=42&desc=Open-source%20AI%20content%20dashboard%20for%20creators&descAlignY=62&descFontColor=FFE0F0&descFontSize=16"/>
+# MiniMax Content Studio
 
-<br/>
+**Open-source AI content dashboard for creators**
 
-[![Next.js](https://img.shields.io/badge/Next.js-FF4DA6?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-9B5CFF?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![MiniMax AI](https://img.shields.io/badge/MiniMax%20AI-FF8CC8?style=for-the-badge&logoColor=white)](https://minimax.io)
-[![License](https://img.shields.io/badge/License-MIT-FF4DA6?style=for-the-badge)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-9B5CFF?style=for-the-badge)](CONTRIBUTING.md)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![MiniMax AI](https://img.shields.io/badge/MiniMax%20AI-111111?style=flat-square&logoColor=white)](https://minimax.io)
+[![License MIT](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-6366f1?style=flat-square)](CONTRIBUTING.md)
 
-<br/>
-
-> Generate scripts · thumbnails · music · content pipelines — all from one clean local interface.
+Generate scripts · thumbnails · music · content pipelines — all from one clean local interface.
 
 </div>
 
@@ -24,8 +22,6 @@ A visual, open-source dashboard for creators who want to use **MiniMax's AI mode
 
 You bring your own MiniMax API key. Everything runs locally on your machine.
 
-<div align="center">
-
 | | |
 |---|---|
 | 🎬 **Script Generator** | Generate video scripts with MiniMax M2.7 |
@@ -34,8 +30,6 @@ You bring your own MiniMax API key. Everything runs locally on your machine.
 | ⚡ **Pipeline Builder** | Chain steps into automated content workflows |
 | 📦 **Asset Library** | Manage and export all your generated content |
 | ⚙️ **Settings** | API key config + Demo Mode (no key needed) |
-
-</div>
 
 ---
 
@@ -181,13 +175,6 @@ See [SECURITY.md](SECURITY.md) to report vulnerabilities.
 
 ---
 
-<div align="center">
+## License
 
-**Built by [Vitoria Ferreira](https://github.com/vivieches)**
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-FF4DA6?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/vitória-ferreira-162643281)
-[![GitHub](https://img.shields.io/badge/GitHub-9B5CFF?style=for-the-badge&logo=github&logoColor=white)](https://github.com/vivieches)
-
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=FF4DA6&height=100&section=footer"/>
-
-</div>
+[MIT](LICENSE) — Built by [Vitoria Ferreira](https://github.com/vivieches)
