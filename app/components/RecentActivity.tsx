@@ -1,6 +1,4 @@
-"use client";
-
-import { FileText, Image, Music, Box, ChevronRight } from "lucide-react";
+import { FileText, Image, Music } from "lucide-react";
 
 const activities = [
   {
@@ -21,45 +19,38 @@ const activities = [
     subtitle: "Archivo generado",
     time: "8h",
   },
-  {
-    icon: Box,
-    title: "Transición minimal 03",
-    subtitle: "Asset agregado",
-    time: "1d",
-  },
 ];
 
-export function RecentActivity() {
+export function ActivityPanel() {
   return (
-    <div className="rounded-lg border border-white/[0.07] bg-[#11131A] px-[22px] pb-[20px] pt-[20px]">
-      <h3 className="mb-[18px] text-[16px] font-semibold text-[#F4F6FA]">
+    <aside className="flex flex-1 flex-col rounded-[14px] border border-white/[0.075] bg-[#151516] px-[26px] pb-[22px] pt-[24px]">
+      <h2 className="mb-[26px] text-[16px] font-semibold text-[#F5F2F4]">
         Actividad reciente
-      </h3>
+      </h2>
 
-      <div className="space-y-[17px]">
+      <div className="space-y-[26px]">
         {activities.map((activity) => {
           const Icon = activity.icon;
           return (
-            <div key={activity.title} className="group flex items-center gap-[17px]">
-              <div className="flex h-[31px] w-[31px] flex-shrink-0 items-center justify-center rounded-lg text-[#d2d5df]">
+            <div key={activity.title} className="grid grid-cols-[28px_minmax(0,1fr)_28px] items-start gap-[14px]">
+              <div className="flex h-[28px] w-[28px] flex-shrink-0 items-center justify-center text-[#C2C6D0]">
                 <Icon className="h-[22px] w-[22px]" strokeWidth={1.45} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-medium text-[#c8ccd5]">
+                <p className="truncate text-[14px] font-medium leading-[1.25] text-[#F1EEF1]">
                   {activity.title}
                 </p>
-                <p className="mt-0.5 text-[13px] text-[#707684]">{activity.subtitle}</p>
+                <p className="mt-[5px] text-[13px] leading-none text-[#858A98]">{activity.subtitle}</p>
               </div>
-              <span className="flex-shrink-0 text-[13px] text-[#707684]">{activity.time}</span>
+              <span className="pt-[3px] text-right text-[13px] leading-none text-[#858A98]">
+                {activity.time}
+              </span>
             </div>
           );
         })}
       </div>
-
-      <button className="group mt-[22px] flex items-center gap-1 text-[14px] text-[#9CA3AF] transition-colors duration-200 hover:text-accent">
-        Ver toda la actividad
-        <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={1.5} />
-      </button>
-    </div>
+    </aside>
   );
 }
+
+export const RecentActivity = ActivityPanel;

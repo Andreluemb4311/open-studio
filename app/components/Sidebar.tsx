@@ -3,33 +3,33 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import NextImage from "next/image";
 import {
-  Home,
-  Layers,
-  FileText,
-  Image,
   Music,
   Box,
-  LayoutTemplate,
+  FileText,
+  Home,
+  Image,
+  Layers,
   Download,
-  Settings,
   Menu,
+  Settings,
   X,
 } from "lucide-react";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const navItems = [
   { icon: Home, label: "Inicio", href: "/" },
-  { icon: Layers, label: "Proyectos", href: "/pipeline" },
+  { icon: Layers, label: "Pipeline", href: "/pipeline" },
   { icon: FileText, label: "Guiones", href: "/scripts" },
   { icon: Image, label: "Miniaturas", href: "/thumbnails" },
   { icon: Music, label: "Música", href: "/music" },
   { icon: Box, label: "Assets", href: "/assets" },
-  { icon: LayoutTemplate, label: "Plantillas", href: "/templates" },
-  { icon: Download, label: "Exports", href: "/exports" },
 ];
 
-const bottomItems = [{ icon: Settings, label: "Ajustes", href: "/settings" }];
+const bottomItems = [
+  { icon: Download, label: "Descargas", href: "/exports" },
+  { icon: Settings, label: "Ajustes", href: "/settings" },
+];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -40,72 +40,85 @@ export function Sidebar() {
 
   const sidebarContent = (
     <>
-      <div className="flex items-center justify-center pb-[41px] pt-7">
-        <div className="flex h-[43px] w-[43px] flex-shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-[#171920] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <span className="select-none text-[14px] font-bold text-accent">OS</span>
-        </div>
+      <div className="flex items-center justify-center pb-[54px] pt-[34px]">
+        <NextImage
+          src="/logo.png"
+          alt="Open Studio"
+          width={36}
+          height={36}
+          priority
+          className="h-9 w-9 rounded-[9px] object-cover"
+        />
       </div>
 
-      <nav className="flex-1 space-y-[19px] px-3">
+      <nav className="flex-1 space-y-[21px] px-[11px]" aria-label="Navegação principal">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
           return (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.label}`}
               href={item.href}
               title={item.label}
               onClick={() => setMobileOpen(false)}
               className={`
-                group relative flex h-[45px] w-full items-center justify-center rounded-md
-                transition-all duration-200
+                group relative flex h-12 w-full items-center justify-center rounded-[7px]
+                transition-all duration-200 ease-out
                 ${
                   active
-                    ? "bg-[#171821] text-accent"
-                    : "text-[#8B91A2] hover:bg-white/[0.05] hover:text-[#F4F6FA]"
+                    ? "bg-[#141620] text-accent"
+                    : "text-[#8D91A0] opacity-90 hover:bg-white/[0.045] hover:text-[#F5F2F4] hover:opacity-100"
                 }
               `}
               aria-current={active ? "page" : undefined}
             >
               <Icon className="h-5 w-5" strokeWidth={1.5} />
               {active && (
-                <span className="absolute -right-3 top-1/2 h-[41px] w-[2px] -translate-y-1/2 rounded-l-full bg-accent" />
+                <span className="absolute left-0 top-1/2 h-[39px] w-px -translate-y-1/2 rounded-r-full bg-accent" />
               )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="space-y-5 px-3 pb-6">
+      <div className="space-y-[22px] px-[11px] pb-[24px]">
         {bottomItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
           return (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.label}`}
               href={item.href}
               title={item.label}
               onClick={() => setMobileOpen(false)}
               className={`
-                relative flex h-[35px] w-full items-center justify-center rounded-md
-                transition-all duration-200
+                relative flex h-10 w-full items-center justify-center rounded-[7px]
+                transition-all duration-200 ease-out
                 ${
                   active
-                    ? "bg-[#171821] text-accent"
-                    : "text-[#8B91A2] hover:bg-white/[0.05] hover:text-[#F4F6FA]"
+                    ? "bg-[#141620] text-accent"
+                    : "text-[#8D91A0] hover:bg-white/[0.045] hover:text-[#F5F2F4]"
                 }
               `}
             >
               <Icon className="h-5 w-5" strokeWidth={1.5} />
               {active && (
-                <span className="absolute -right-3 top-1/2 h-[35px] w-[2px] -translate-y-1/2 rounded-l-full bg-accent" />
+                <span className="absolute left-0 top-1/2 h-[34px] w-px -translate-y-1/2 rounded-r-full bg-accent" />
               )}
             </Link>
           );
         })}
 
-        <div className="flex h-[35px] w-full items-center justify-center">
-          <LanguageSwitcher />
+        <div className="flex h-[51px] w-full items-center justify-center pt-[7px]">
+          <div className="flex h-[46px] w-[46px] items-center justify-center rounded-full border border-white/[0.08] bg-[#0E1018]">
+            <NextImage
+              src="/logo.png"
+              alt=""
+              width={28}
+              height={28}
+              className="h-7 w-7 rounded-full object-cover"
+            />
+          </div>
         </div>
       </div>
     </>
@@ -135,7 +148,7 @@ export function Sidebar() {
       <aside
         className={`
           fixed left-0 top-0 z-[56] flex h-screen w-[95px] flex-col
-          border-r border-line bg-sidebar transition-transform duration-300 ease-out
+          border-r border-white/[0.06] bg-[#101012] transition-transform duration-300 ease-out
           md:sticky md:z-auto
           ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}

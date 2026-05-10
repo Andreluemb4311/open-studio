@@ -7,96 +7,96 @@ const projects = [
   {
     title: "Thumbnail - Split-frame YouTube",
     time: "4h ago",
-    artwork: "thumbnail",
+    artwork: "copper",
   },
   {
     title: "Script - Improve this tone",
     time: "4h ago",
-    artwork: "orbGreen",
+    artwork: "blueSphere",
   },
   {
-    title: "Script - IDEA: Quiero un video sobre...",
+    title: "Script - IDEA: Quiero un vídeo sobre...",
     time: "4h ago",
-    artwork: "orbViolet",
+    artwork: "roseCopper",
   },
 ];
 
 function ProjectArtwork({ type }: { type: string }) {
-  if (type === "thumbnail") {
+  if (type === "copper") {
     return (
-      <div className="relative h-full w-full overflow-hidden bg-[#070708]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_36%,rgba(165,102,74,0.55),transparent_18%),radial-gradient(circle_at_47%_24%,rgba(75,48,37,0.65),transparent_18%),linear-gradient(90deg,#070707_0%,#0d0b0a_42%,#2b170f_100%)]" />
-        <div className="absolute bottom-0 right-[35px] h-[150px] w-[122px] rounded-t-full bg-[linear-gradient(90deg,#4b2a20,#c99578_46%,#4a271d_82%)] opacity-95" />
-        <div className="absolute bottom-[24px] right-[64px] h-[58px] w-[72px] rounded-[55%_45%_50%_50%] bg-[#d5a48d]" />
-        <div className="absolute bottom-[56px] right-[48px] h-[86px] w-[70px] rounded-t-full bg-[linear-gradient(90deg,#3d211b,#7a4638)]" />
-        <div className="absolute left-[42px] top-[30px] text-[18px] font-semibold tracking-[-0.04em] text-white/90">minimax</div>
-        <div className="absolute left-[64px] top-[58px] text-[43px] font-medium tracking-[-0.08em] text-[#f1d6c3]">GPT</div>
-        <div className="absolute left-[42px] top-[45px] h-[38px] w-[38px] rounded-lg border border-[#e8b994]/40 bg-[radial-gradient(circle_at_42%_42%,#f1a865,#6b2f18_54%,#18100c)]" />
+      <div className="relative h-full w-full overflow-hidden bg-[#090808]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_38%,rgba(137,71,42,0.42),transparent_26%),linear-gradient(90deg,#090808_0%,#100c0a_42%,#2B160F_100%)]" />
+        <div className="absolute bottom-0 right-[48px] h-[124px] w-[108px] rounded-t-full bg-[linear-gradient(90deg,#3B2019_0%,#C58B69_46%,#43231A_86%)]" />
+        <div className="absolute bottom-[28px] right-[77px] h-[58px] w-[71px] rounded-[0_0_0_56px] bg-[#E3B690]" />
+        <div className="absolute right-[40px] top-0 h-[71px] w-[58px] bg-[linear-gradient(180deg,#A36A4F,#47261B)] opacity-75" />
+        <div className="absolute left-[42px] top-[32px] h-[38px] w-[38px] rounded-[8px] border border-[#F2B178]/30 bg-[radial-gradient(circle_at_42%_38%,#F1A35E_0%,#A85128_45%,#23100B_100%)] shadow-[0_0_24px_rgba(226,126,66,0.38)]" />
+        <div className="absolute inset-x-0 bottom-0 h-[34px] bg-[linear-gradient(180deg,transparent,rgba(7,8,13,0.35))]" />
       </div>
     );
   }
 
-  if (type === "orbGreen") {
+  if (type === "blueSphere") {
     return (
-      <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(135deg,#151b1f,#15171c_58%,#0f1117)]">
-        <div className="absolute -bottom-[42px] left-[24px] h-[154px] w-[154px] rounded-full bg-[radial-gradient(circle_at_33%_30%,#394057,#171b30_62%,#0f1220)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_77%_20%,rgba(88,136,87,0.22),transparent_36%)]" />
+      <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(135deg,#15191B_0%,#11151A_48%,#0A0C12_100%)]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(73,112,73,0.23),transparent_34%),radial-gradient(circle_at_16%_90%,rgba(52,68,120,0.14),transparent_38%)]" />
+        <div className="absolute -bottom-[59px] left-[26px] h-[165px] w-[165px] rounded-full bg-[radial-gradient(circle_at_36%_28%,#323A58_0%,#1B213C_55%,#0C1020_100%)] shadow-[inset_-26px_-34px_50px_rgba(6,7,12,0.36)]" />
+        <div className="absolute inset-x-0 bottom-0 h-[33px] bg-[linear-gradient(180deg,transparent,rgba(7,8,13,0.34))]" />
       </div>
     );
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(135deg,#1b151c,#10131a_60%,#11131A)]">
-      <div className="absolute left-[28px] top-[35px] h-[56px] w-[56px] rounded-full bg-[radial-gradient(circle_at_35%_32%,#bb8797,#3c2439_70%)]" />
-      <div className="absolute bottom-[-48px] right-[18px] h-[120px] w-[188px] rounded-[50%] bg-[radial-gradient(circle_at_45%_18%,#a47557,#211a24_74%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(161,85,154,0.16),transparent_38%)]" />
+    <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(135deg,#19131C_0%,#11131B_58%,#0E1017_100%)]">
+      <div className="absolute left-[28px] top-[30px] h-[57px] w-[57px] rounded-full bg-[radial-gradient(circle_at_35%_30%,#C184A0_0%,#7F4D69_48%,#362137_100%)] shadow-[0_0_25px_rgba(208,111,167,0.14)]" />
+      <div className="absolute bottom-[-63px] right-[42px] h-[128px] w-[188px] rounded-t-full bg-[radial-gradient(ellipse_at_48%_11%,#B7835F_0%,#7B563F_42%,#201721_82%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_14%,rgba(208,111,167,0.12),transparent_33%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-[33px] bg-[linear-gradient(180deg,transparent,rgba(7,8,13,0.35))]" />
     </div>
   );
 }
 
 export function RecentProjects() {
   return (
-    <div className="w-full pt-[18px]">
-      <div className="mb-[18px] flex items-center justify-between px-0.5">
-        <h2 className="text-[16px] font-semibold text-[#F4F6FA]">Proyectos recientes</h2>
+    <section className="flex w-full flex-1 flex-col" aria-labelledby="recent-projects-title">
+      <div className="mb-[19px] flex items-center justify-between">
+        <h2 id="recent-projects-title" className="text-[16px] font-semibold text-[#F5F2F4]">
+          Proyectos recientes
+        </h2>
         <Link
           href="/assets"
-          className="text-[14px] text-[#9CA3AF] transition-colors duration-150 hover:text-[#F4F6FA]"
+          className="text-[14px] font-medium text-accent transition-colors duration-150 hover:text-accent-hi"
         >
           Ver todos
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-[18px] sm:grid-cols-3">
         {projects.map((project) => (
           <div
             key={project.title}
-            className="group overflow-hidden rounded-lg border border-white/[0.07] bg-[#11131A] transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.14]"
+            className="group flex flex-col overflow-hidden rounded-[12px] border border-white/[0.075] bg-[#151516] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[rgba(208,111,167,0.22)]"
           >
-            <div className="relative h-[130px] overflow-hidden">
+            <div className="relative min-h-[130px] flex-1 overflow-hidden">
               <ProjectArtwork type={project.artwork} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
             </div>
 
-            <div className="flex items-start justify-between px-[14px] pb-[17px] pt-[16px]">
+            <div className="flex min-h-[85px] items-start justify-between px-[16px] pb-[16px] pt-[16px]">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-semibold text-[#F4F6FA] transition-colors duration-150 group-hover:text-[#FF4FA3]">
+                <p className="truncate text-[14px] font-semibold leading-[1.25] text-[#F5F2F4] transition-colors duration-150 group-hover:text-accent">
                   {project.title}
                 </p>
-                <p className="mt-[14px] text-[13px] text-[#777d8a]">
-                  {project.time} · Actualizado
-                </p>
+                <p className="mt-[14px] text-[13px] leading-none text-[#7C818F]">{project.time}</p>
               </div>
               <button
-                className="ml-2 mt-[31px] rounded-lg p-1 text-[#a7acb8] transition-colors duration-150 hover:bg-white/[0.05] hover:text-[#F4F6FA]"
+                className="ml-2 mt-[28px] rounded-md p-1 text-[#A2A7B3] transition-colors duration-150 hover:bg-white/[0.05] hover:text-[#F5F2F4]"
                 aria-label="Más opciones"
               >
-                <MoreHorizontal className="h-4 w-4" strokeWidth={1.8} />
+                <MoreHorizontal className="h-4 w-4" strokeWidth={1.55} />
               </button>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

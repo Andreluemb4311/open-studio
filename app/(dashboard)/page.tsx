@@ -1,23 +1,28 @@
 "use client";
-import { Topbar } from "../components/Topbar";
+import { Header } from "../components/Topbar";
 import { OpenStudioHero } from "../components/OpenStudioHero";
+import { QuickActions } from "../components/QuickActions";
 import { RecentProjects } from "../components/RecentProjects";
-import { RecentActivity } from "../components/RecentActivity";
+import { ActivityPanel } from "../components/RecentActivity";
 
 export default function HomePage() {
   return (
     <>
-      <Topbar />
-      <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="relative z-10 mx-auto max-w-[1378px] px-5 py-6 md:px-0">
-          <OpenStudioHero />
+      <Header />
+      <div className="relative flex flex-1 flex-col overflow-hidden bg-[#0a0a0d]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_18%,rgba(208,111,167,0.055),transparent_32%),radial-gradient(circle_at_24%_5%,rgba(155,108,255,0.035),transparent_28%),linear-gradient(180deg,#0a0a0d_0%,#0a0a0d_48%,#0a0a0d_100%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.025] [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.8)_0.6px,transparent_0.7px)] [background-size:4px_4px]" />
 
-          <div className="mt-4 grid grid-cols-1 gap-9 lg:grid-cols-[minmax(0,870px)_472px]">
+        <div className="relative z-10 mx-auto box-border flex w-full max-w-[1526px] flex-1 flex-col pb-6 px-[clamp(32px,7vw,136px)]">
+          <OpenStudioHero />
+          <QuickActions />
+
+          <div className="mt-[28px] grid min-h-0 flex-1 grid-cols-1 gap-[34px] xl:grid-cols-[minmax(0,1fr)_minmax(370px,440px)] xl:gap-[52px]">
             <RecentProjects />
-            <RecentActivity />
+            <ActivityPanel />
           </div>
         </div>
-      </main>
+      </div>
     </>
   );
 }

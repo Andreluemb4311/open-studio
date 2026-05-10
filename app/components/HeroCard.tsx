@@ -4,7 +4,7 @@ export function HeroCard() {
   return (
     <div className="relative w-full rounded-[20px] bg-[#11131A] border border-[rgba(255,255,255,0.08)] overflow-hidden" style={{ height: "280px" }}>
       {/* Background gradient */}
-      <div 
+      <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background: `
@@ -13,11 +13,11 @@ export function HeroCard() {
           `
         }}
       />
-      
+
       {/* Abstract cards illustration on right */}
       <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-2 pointer-events-none">
         {/* Back card */}
-        <div 
+        <div
           className="w-20 h-28 rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] backdrop-blur-sm flex items-center justify-center"
           style={{ transform: "perspective(600px) rotateY(-20deg) rotateX(8deg) translateX(40px)" }}
         >
@@ -28,7 +28,7 @@ export function HeroCard() {
           </svg>
         </div>
         {/* Middle card */}
-        <div 
+        <div
           className="w-20 h-28 rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.08)] backdrop-blur-sm flex items-center justify-center"
           style={{ transform: "perspective(600px) rotateY(-20deg) rotateX(8deg) translateZ(15px) translateX(20px)" }}
         >
@@ -37,7 +37,7 @@ export function HeroCard() {
           </svg>
         </div>
         {/* Front card */}
-        <div 
+        <div
           className="w-20 h-28 rounded-xl bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.1)] backdrop-blur-sm flex items-center justify-center"
           style={{ transform: "perspective(600px) rotateY(-20deg) rotateX(8deg) translateZ(30px)" }}
         >
@@ -58,9 +58,9 @@ export function HeroCard() {
           De la idea al contenido
         </h2>
         <h2 className="text-[32px] sm:text-4xl font-bold leading-tight tracking-tight mb-4">
-          <span 
+          <span
             className="bg-clip-text text-transparent"
-            style={{ backgroundImage: "linear-gradient(135deg, #FF4FA3 0%, #A855F7 100%)" }}
+            style={{ backgroundImage: "linear-gradient(135deg, #D06FA7 0%, #9B6CFF 100%)" }}
           >
             listo para publicar
           </span>
