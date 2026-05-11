@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateImageWithProvider } from "@/lib/providers/generation";
 import { createAsset } from "@/lib/storage/assets";
+import { cacheGeneratedImageUrls } from "@/lib/storage/generatedImages";
 import { imageGenerateSchema, validateOr400 } from "@/lib/validation/schemas";
 import { withRateLimitHeaders, validatePayloadSize, PAYLOAD_LIMITS } from "@/lib/security/rateLimit";
 
@@ -28,18 +29,21 @@ export async function POST(request: Request) {
       referenceImage,
       referenceType,
     });
+    const cachedUrls = await cacheGeneratedImageUrls(result.urls);
+    const responseResult = { ...result, urls: cachedUrls };
 
-    if (saveToAssets && result.urls.length > 0) {
+    if (saveToAssets && responseResult.urls.length > 0) {
       try {
         await createAsset({
           type: "thumbnail",
           title: `Thumbnail - ${prompt.slice(0, 60)}`,
           description: prompt,
-          thumbnailPath: result.urls[0],
+          thumbnailPath: responseResult.urls[0],
           metadata: {
             prompt,
             aspectRatio,
-            urls: result.urls,
+            urls: responseResult.urls,
+            remoteUrls: result.urls,
             variations: n,
             hasReference: !!referenceImage,
             referenceType,
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return withRateLimitHeaders(NextResponse.json(result));
+    return withRateLimitHeaders(NextResponse.json(responseResult));
   } catch (error) {
     console.error("Image generation error:", error);
     return NextResponse.json(

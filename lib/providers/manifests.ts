@@ -28,8 +28,8 @@ export const providerManifests: ProviderManifest[] = [
     capabilities: ["text", "image"],
     defaultBaseUrl: "https://api.openai.com/v1",
     defaultModels: {
-      text: "gpt-4.1-mini",
-      image: "gpt-image-1",
+      text: "gpt-4o-mini",
+      image: "dall-e-3",
     },
     modelDiscovery: true,
     docsUrl: "https://platform.openai.com/docs/api-reference",

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAsset } from "@/lib/storage/assets";
+import { cacheGeneratedImageUrls } from "@/lib/storage/generatedImages";
 import { generateImageWithProvider } from "@/lib/providers/generation";
 import { imageProviderGenerateSchema, validateOr400 } from "@/lib/validation/schemas";
 import { withRateLimitHeaders, validatePayloadSize, PAYLOAD_LIMITS } from "@/lib/security/rateLimit";
@@ -17,20 +18,25 @@ export async function POST(request: Request) {
 
     const { provider, saveToAssets = true, ...params } = validation.data;
     const result = await generateImageWithProvider(params, provider);
+    const cachedUrls = await cacheGeneratedImageUrls(result.urls);
+    const responseResult = { ...result, urls: cachedUrls };
 
-    if (saveToAssets && result.urls[0]) {
+    if (saveToAssets && responseResult.urls[0]) {
       await createAsset({
         type: "thumbnail",
         title: `Image - ${params.prompt.slice(0, 60)}`,
         description: params.prompt,
-        thumbnailPath: result.urls[0],
-        metadata: result as unknown as Record<string, unknown>,
+        thumbnailPath: responseResult.urls[0],
+        metadata: {
+          ...(responseResult as unknown as Record<string, unknown>),
+          remoteUrls: result.urls,
+        },
         sourceModule: "image-generator",
         tags: ["image", result.providerId],
       });
     }
 
-    return withRateLimitHeaders(NextResponse.json({ ok: true, ...result }));
+    return withRateLimitHeaders(NextResponse.json({ ok: true, ...responseResult }));
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: "Failed to generate image", details: error instanceof Error ? error.message : "Unknown error" },

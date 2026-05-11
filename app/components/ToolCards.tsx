@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Image, Music, Box, Type } from "lucide-react";
+import { FileText, Image, Box, Type } from "lucide-react";
 
 const tools = [
   {
@@ -20,12 +20,6 @@ const tools = [
     icon: Type,
     label: "Leyenda",
     description: "Genera leyendas",
-  },
-  {
-    href: "/music",
-    icon: Music,
-    label: "Música",
-    description: "Crea música",
   },
   {
     href: "/assets",

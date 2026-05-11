@@ -1,794 +1,901 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
+import { useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
-  Sparkles,
-  Loader2,
-  Download,
-  ImagePlus,
-  X,
-  Copy,
-  RefreshCw,
-  Star,
-  ChevronDown,
-  Info,
-  Check,
   AlertTriangle,
+  Check,
+  ChevronDown,
+  Clock3,
+  Download,
+  Expand,
+  ImagePlus,
+  Info,
+  Layers,
+  Lightbulb,
+  Loader2,
+  MoreHorizontal,
+  Palette,
+  Search,
+  Sparkles,
+  Upload,
   Wand2,
-  Type,
-  Link,
+  X,
+  Zap,
 } from "lucide-react";
-import { useT } from "@/lib/i18n";
-import {
-  validateHookText,
-  getQualityTips,
-  THUMBNAIL_STYLES,
-  AUDIENCE_OPTIONS,
-  MOOD_OPTIONS,
-  BACKGROUND_OPTIONS,
-  COLOR_PRESETS,
-  BRAND_OPTIONS,
-} from "@/lib/prompts/thumbnailPrompt";
-import TextOverlayEditor from "@/components/text-overlay-editor";
 
-interface ThumbnailResult {
+type ThumbnailConfig = {
+  topic: string;
+  title: string;
+  impactText: string;
+  audience: string;
+  visualStyle: string;
+  mood: string;
+  background: string;
+  colorPreference: string;
+  includeFace: boolean;
+  includeLogo: boolean;
+  includeText: boolean;
+  variations: number;
+  safeTextMode: boolean;
+  referenceImage: string;
+  referenceType: "face" | "style";
+  resolution: "1280x720" | "1920x1080";
+};
+
+type ThumbnailResult = {
   urls: string[];
-  base64s: string[];
-  finalPrompt: string;
+  base64s?: string[];
+  finalPrompt?: string;
+};
+
+const PRESETS = [
+  { id: "high-ctr", label: "YouTube alto CTR", icon: Zap },
+  { id: "face-text", label: "Cara + texto", icon: ImagePlus },
+  { id: "split-frame", label: "Split frame", icon: Layers },
+  { id: "minimal-clean", label: "Minimal clean", icon: ImagePlus },
+  { id: "more", label: "Más presets", icon: ChevronDown },
+];
+
+const STYLE_OPTIONS = [
+  "YouTube alto CTR",
+  "Cara + texto",
+  "Split frame",
+  "Minimal clean",
+  "Tech premium",
+  "Producto + creador",
+  "Noticia IA",
+  "Antes/después",
+];
+
+const AUDIENCE_OPTIONS = [
+  "Creadores y YouTubers",
+  "Developers e IA builders",
+  "Marketers y growth",
+  "Fundadores y emprendedores",
+  "Estudiantes y makers",
+  "Audiencia general",
+];
+
+const MOOD_OPTIONS = ["Sorprendido 😮", "Confiado", "Curioso", "Dramático", "Profesional", "Emocionado", "Misterioso"];
+
+const BACKGROUND_OPTIONS = [
+  "Sólido simple",
+  "Gradiente suave",
+  "UI de producto",
+  "Estudio oscuro",
+  "Minimal tech",
+  "Split background",
+  "Abstracto",
+];
+
+const COLOR_OPTIONS = [
+  { id: "minimax-coral", label: "Coral cálido MiniMax", colors: ["#ff6077", "#fff7f9", "#0f172a", "#59606a"] },
+  { id: "open-studio-pink", label: "Rosa Open Studio", colors: ["#D06FA7", "#F5F2F4", "#151516", "#5F6472"] },
+  { id: "dark-premium", label: "Dark premium", colors: ["#D06FA7", "#11131C", "#F5F2F4", "#9B6CFF"] },
+  { id: "clean-white", label: "Blanco limpio", colors: ["#F5F2F4", "#D06FA7", "#0A0A0D", "#CBD5E1"] },
+  { id: "black-coral", label: "Negro + coral", colors: ["#0A0A0D", "#ff6077", "#F5F2F4", "#27272A"] },
+  { id: "tech-blue", label: "Azul tech", colors: ["#0F172A", "#60A5FA", "#F5F2F4", "#D06FA7"] },
+  { id: "custom", label: "Custom", colors: ["#D06FA7", "#F5F2F4", "#151516", "#5F6472"] },
+];
+
+const HOOKS = ["La IA que cambió mi negocio", "5 herramientas que uso a diario", "Automatiza tu canal con IA"];
+
+const INITIAL_CONFIG: ThumbnailConfig = {
+  topic: "MiniMax M2.7 construyó mi fábrica de contenido",
+  title: "5 AI Tools in 2024",
+  impactText: "FÁBRICA DE CONTENIDO",
+  audience: "Creadores y YouTubers",
+  visualStyle: "YouTube alto CTR",
+  mood: "Sorprendido 😮",
+  background: "Sólido simple",
+  colorPreference: "minimax-coral",
+  includeFace: true,
+  includeLogo: false,
+  includeText: true,
+  variations: 4,
+  safeTextMode: false,
+  referenceImage: "",
+  referenceType: "face",
+  resolution: "1920x1080",
+};
+
+function buildThumbnailPrompt(config: ThumbnailConfig) {
+  const colorPreset = COLOR_OPTIONS.find((option) => option.id === config.colorPreference);
+  const textInstruction = config.safeTextMode
+    ? "Generate the base thumbnail without any text, letters, words, typography, logos, or watermarks. The impact text will be applied later as a front-end overlay."
+    : config.includeText
+      ? `Use large, bold, readable thumbnail text with the exact words: "${config.impactText}". Keep it clean, high contrast, and readable on mobile.`
+      : "Do not add text to the image.";
+
+  return [
+    "Professional YouTube thumbnail, 16:9, high CTR composition, modern creator aesthetic.",
+    `Video topic: ${config.topic}.`,
+    `Video title: ${config.title}.`,
+    `Target audience: ${config.audience}.`,
+    `Visual style: ${config.visualStyle}. Mood: ${config.mood}. Background: ${config.background}.`,
+    `Color direction: ${colorPreset?.label ?? config.colorPreference}, using strong contrast without changing the Open Studio product UI palette.`,
+    config.includeFace
+      ? "Include one expressive creator-style face as the main focal point, clear eyes, emotional reaction, clean studio lighting, no distorted face."
+      : "Use a strong product or concept focal point instead of a face.",
+    config.includeLogo
+      ? "Include only a subtle brand mark area if naturally relevant. Do not invent random logos."
+      : "No random logos or watermarks.",
+    textInstruction,
+    "Composition rules: clear focal point, bold readable hierarchy, clean layout, no clutter, no tiny text, no generic AI glow, no unreadable typography, no fake UI gibberish.",
+    `Output target: ${config.resolution}, sharp thumbnail suitable for YouTube search, home feed, and mobile preview.`,
+  ].join("\n");
+}
+
+function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <section
+      className={`rounded-[14px] border border-line bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.025),0_20px_60px_rgba(0,0,0,0.18)] ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  label,
+  children,
+  aside,
+  help,
+}: {
+  label: string;
+  children: ReactNode;
+  aside?: ReactNode;
+  help?: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <label className="text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-2">{label}</label>
+        {aside}
+      </div>
+      {children}
+      {help ? <div className="mt-1.5 text-[11px] leading-4 text-ink-3">{help}</div> : null}
+    </div>
+  );
+}
+
+function SelectField({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  ariaLabel: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        aria-label={ariaLabel}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full appearance-none rounded-[8px] border border-line bg-card-hi px-3 pr-9 text-[12px] font-medium text-ink transition duration-200 hover:border-line-hi focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" strokeWidth={1.7} />
+    </div>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between gap-3 rounded-[8px] py-1.5 text-left"
+    >
+      <span className="text-[12px] font-medium text-ink-2">{label}</span>
+      <span className={`relative h-5 w-9 rounded-full transition ${checked ? "bg-accent" : "bg-line-hi"}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-accent-fg transition ${checked ? "left-4" : "left-0.5"}`} />
+      </span>
+    </button>
+  );
+}
+
+function AssistantPanel({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-[10px] border border-line bg-card-hi/50 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-accent">{icon}</span>
+        <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 export default function ThumbnailGeneratorPage() {
-  const { t } = useT();
-
-  // ── Form State ─────────────────────────────────────────────────────
-  const [topic, setTopic] = useState("");
-  const [title, setTitle] = useState("");
-  const [hookText, setHookText] = useState("");
-  const [audience, setAudience] = useState("creators");
-  const [style, setStyle] = useState("high-ctr");
-  const [mood, setMood] = useState("surprised");
-  const [background, setBackground] = useState("simple");
-  const [colorPreference, setColorPreference] = useState("minimax-coral");
-  const [brand, setBrand] = useState("none");
-  const [customBrand, setCustomBrand] = useState("");
-  const [includeFace, setIncludeFace] = useState(true);
-  const [includeText, setIncludeText] = useState(true);
-  const [includeLogo, setIncludeLogo] = useState(false);
-  const [safeTextMode, setSafeTextMode] = useState(false);
-  const [variations, setVariations] = useState(1);
-
-  const [referenceImageUrl, setReferenceImageUrl] = useState("");
-
-  const [prompt, setPrompt] = useState("");
-  const [generatedPrompt, setGeneratedPrompt] = useState("");
-
-  // ── UI State ───────────────────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [config, setConfig] = useState<ThumbnailConfig>(INITIAL_CONFIG);
+  const [activePreset, setActivePreset] = useState("high-ctr");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [generatingPrompt, setGeneratingPrompt] = useState(false);
-  const [results, setResults] = useState<ThumbnailResult | null>(null);
+  const [variationsLoading, setVariationsLoading] = useState(false);
+  const [status, setStatus] = useState("");
   const [error, setError] = useState("");
-  const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [favoriteUrls, setFavoriteUrls] = useState<Set<string>>(new Set());
-  const [editingOverlayUrl, setEditingOverlayUrl] = useState<string | null>(null);
-  const [editingOverlayIndex, setEditingOverlayIndex] = useState<number>(0);
+  const [result, setResult] = useState<ThumbnailResult | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // ── Derived State ──────────────────────────────────────────────────
-  const hasUsableReferenceImage = referenceImageUrl.trim().startsWith("https://");
-  const hookValidation = validateHookText(hookText);
-  const qualityTips = getQualityTips({
-    topic,
-    hookText,
-    style,
-    mood,
-    includeFace,
-    hasReferenceFace: hasUsableReferenceImage,
-    safeTextMode,
-    background,
-  });
+  const selectedUrl = result?.urls?.[selectedIndex] ?? "";
+  const prompt = useMemo(() => buildThumbnailPrompt(config), [config]);
+  const impactWordCount = config.impactText.trim().split(/\s+/).filter(Boolean).length;
+  const selectedColor = COLOR_OPTIONS.find((option) => option.id === config.colorPreference) ?? COLOR_OPTIONS[0];
+  const canGenerate = Boolean(config.topic.trim() && config.title.trim() && config.impactText.trim());
 
-  const canGenerate = topic.trim().length > 0 && title.trim().length > 0;
-
-  // ── Handlers ───────────────────────────────────────────────────────
-
-  function buildImagePrompt(basePrompt: string) {
-    const parts: string[] = [basePrompt.trim()];
-
-    if (safeTextMode) {
-      parts.push("DO NOT include any text, letters, or typography in the image.");
-    }
-    if (hasUsableReferenceImage) {
-      parts.push(
-        "COMPOSITION: person positioned on the RIGHT side of the frame, occupying at most 40% of frame width, showing upper body not just face. " +
-        "The LEFT half of the frame must contain large bold readable text. Wide shot, NOT a portrait or close-up."
-      );
-    }
-
-    const fullPrompt = parts.join(" ");
-    console.log("[Thumbnail] Prompt length:", fullPrompt.length);
-    return fullPrompt;
+  function updateConfig<K extends keyof ThumbnailConfig>(key: K, value: ThumbnailConfig[K]) {
+    setConfig((current) => ({ ...current, [key]: value }));
   }
 
-  async function handleGeneratePrompt() {
-    if (!canGenerate) return;
-    setGeneratingPrompt(true);
+  function showStatus(message: string) {
+    setStatus(message);
+    window.setTimeout(() => setStatus(""), 2200);
+  }
+
+  function applyPreset(id: string) {
+    setActivePreset(id);
+    if (id === "more") {
+      setAdvancedOpen(true);
+      return;
+    }
+
+    const presetMap: Record<string, Partial<ThumbnailConfig>> = {
+      "high-ctr": {
+        visualStyle: "YouTube alto CTR",
+        mood: "Sorprendido 😮",
+        background: "Sólido simple",
+        colorPreference: "minimax-coral",
+        includeFace: true,
+      },
+      "face-text": {
+        visualStyle: "Cara + texto",
+        mood: "Emocionado",
+        background: "Estudio oscuro",
+        colorPreference: "open-studio-pink",
+        includeFace: true,
+      },
+      "split-frame": {
+        visualStyle: "Split frame",
+        mood: "Dramático",
+        background: "Split background",
+        colorPreference: "black-coral",
+        includeFace: true,
+      },
+      "minimal-clean": {
+        visualStyle: "Minimal clean",
+        mood: "Profesional",
+        background: "Minimal tech",
+        colorPreference: "dark-premium",
+        includeFace: false,
+      },
+    };
+
+    setConfig((current) => ({ ...current, ...presetMap[id] }));
+  }
+
+  function normalizeGenerationError(message: string) {
+    const lower = message.toLowerCase();
+    if (lower.includes("api key") || lower.includes("provider") || lower.includes("settings")) {
+      return "Configura un provider en Ajustes para generar miniaturas.";
+    }
+    return "No se pudo generar la miniatura. Revisa tu conexión o intenta de nuevo.";
+  }
+
+  async function generateImages(nextVariations = config.variations, append = false) {
+    if (!canGenerate) {
+      setError("Completa tema, título y texto de impacto antes de generar.");
+      return;
+    }
+
+    if (append) setVariationsLoading(true);
+    else {
+      setLoading(true);
+      setResult(null);
+      setSelectedIndex(0);
+    }
     setError("");
+
     try {
-      const res = await fetch("/api/minimax/thumbnail-prompt", {
+      const response = await fetch("/api/minimax/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic,
-          title,
-          hookText,
-          audience,
-          style,
-          mood,
-          includeFace,
-          includeText,
-          includeLogo,
-          background,
-          brand: brand === "custom" ? customBrand : brand,
-          colorPreference,
-          hasReferenceFace: hasUsableReferenceImage,
-          hasReferenceStyle: hasUsableReferenceImage,
-          safeTextMode,
-          variations,
-          // NOTE: Do NOT include reference images here — they exceed 1MB payload limit
-          // Images are only sent to /api/minimax/image which has 10MB limit
+          prompt,
+          aspectRatio: "16:9",
+          n: nextVariations,
+          saveToAssets: true,
+          referenceImage: config.referenceImage || undefined,
+          referenceType: config.referenceImage ? config.referenceType : undefined,
         }),
       });
-      const data = await res.json();
-      if (data.prompt) {
-        setGeneratedPrompt(data.prompt);
-        setPrompt(data.prompt);
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        throw new Error(data?.details || data?.error || "generation failed");
       }
-      if (data.error) throw new Error(data.error);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate prompt");
-    } finally {
-      setGeneratingPrompt(false);
-    }
-  }
-
-  async function handleGenerateImage(regenPrompt?: string) {
-    const usePrompt = regenPrompt || prompt;
-    if (!usePrompt) return;
-    setLoading(true);
-    setError("");
-    if (!regenPrompt) setResults(null);
-    try {
-      const imagePrompt = buildImagePrompt(usePrompt);
-      const payload: Record<string, unknown> = {
-        prompt: imagePrompt,
-        aspectRatio: "16:9",
-        n: variations,
-        saveToAssets: true,
-      };
-
-      if (hasUsableReferenceImage) {
-        payload.referenceImage = referenceImageUrl.trim();
-        payload.referenceType = "face";
+      if (!data?.urls?.length) {
+        setError("La generación terminó sin imagen. Intenta con otro prompt.");
+        return;
       }
 
-      console.log("[Thumbnail] Final prompt:", imagePrompt);
-
-      const res = await fetch("/api/minimax/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      setResult((current) => {
+        if (!append || !current?.urls?.length) return data;
+        return {
+          ...data,
+          urls: [...current.urls, ...data.urls].slice(-8),
+          finalPrompt: data.finalPrompt || current.finalPrompt,
+        };
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.details || data.error);
-      setResults(data);
-      setShowPrompt(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate thumbnail");
+      if (!append) setSelectedIndex(0);
+      showStatus(append ? "Variaciones generadas" : "Miniatura generada");
+    } catch (generationError) {
+      setError(normalizeGenerationError(generationError instanceof Error ? generationError.message : ""));
     } finally {
       setLoading(false);
+      setVariationsLoading(false);
     }
   }
 
-  async function handleDownload(url: string, index: number) {
+  async function handleReferenceUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Usa JPG, PNG o WebP como referencia.");
+      return;
+    }
+    if (file.size > 450_000) {
+      setError("La referencia debe pesar menos de 450 KB para enviarse al provider.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateConfig("referenceImage", String(reader.result));
+      showStatus("Referencia cargada");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function downloadSelected() {
+    if (!selectedUrl) return;
     try {
-      const response = await fetch(url);
+      const response = await fetch(selectedUrl);
       const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `thumbnail-${index + 1}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(blobUrl);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `open-studio-thumbnail-${selectedIndex + 1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showStatus("Download listo");
     } catch {
-      // Fallback: open in new tab
-      window.open(url, "_blank");
+      window.open(selectedUrl, "_blank");
     }
   }
 
-  function handleCopyPrompt() {
-    if (!results?.finalPrompt) return;
-    navigator.clipboard.writeText(results.finalPrompt);
-    setCopiedPrompt(true);
-    setTimeout(() => setCopiedPrompt(false), 2000);
+  function applySuggestion() {
+    setConfig((current) => ({
+      ...current,
+      visualStyle: "YouTube alto CTR",
+      mood: "Sorprendido 😮",
+      background: "Sólido simple",
+      colorPreference: "minimax-coral",
+      includeFace: true,
+      impactText: current.impactText || "FÁBRICA DE CONTENIDO",
+    }));
+    setActivePreset("high-ctr");
+    showStatus("Sugerencia aplicada");
   }
-
-  function toggleFavorite(url: string) {
-    setFavoriteUrls((prev) => {
-      const next = new Set(prev);
-      if (next.has(url)) next.delete(url);
-      else next.add(url);
-      return next;
-    });
-  }
-
-  // ── Classes ────────────────────────────────────────────────────────
-  const inputClass =
-    "w-full px-3 py-2.5 rounded-xl bg-card-hi border border-line text-ink text-sm placeholder:text-ink-3 focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all outline-none";
-  const selectClass =
-    "w-full px-3 py-2.5 rounded-xl bg-card-hi border border-line text-ink text-sm appearance-none cursor-pointer focus:border-accent/50 transition-all outline-none pr-8";
-  const labelClass = "block text-[11px] text-ink-3 uppercase tracking-wider mb-1.5 font-medium";
-  const sectionClass = "space-y-4";
-  const optionText = (scope: string, id: string, fallback: string) => {
-    const key = `thumbnails.${scope}.${id}`;
-    const value = t(key);
-    return value === key ? fallback : value;
-  };
-  const moodText = (id: string, fallback: string) => {
-    const emoji = fallback.match(/\s+\S+$/)?.[0] ?? "";
-    return `${optionText("moodOption", id, fallback.replace(emoji, ""))}${emoji}`;
-  };
-  const selectedStyle = THUMBNAIL_STYLES.find((s) => s.id === style);
 
   return (
-    <main className="flex-1 overflow-y-auto overflow-x-hidden">
-      <div className="flex flex-col h-full px-4 py-5 lg:px-8 lg:py-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <h1 className="text-xl font-bold text-ink mb-1">{t("thumbnails.title")}</h1>
-            <p className="text-sm text-ink-2">{t("thumbnails.subtitle")}</p>
+    <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-canvas text-ink">
+      <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8 lg:py-6 2xl:px-9">
+        <header className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <h1 className="text-[28px] font-bold leading-tight tracking-[-0.035em] text-ink">Generador de Miniaturas</h1>
+              <p className="mt-2 text-[14px] text-ink-2">Crea miniaturas atractivas que generan más clics.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label className="relative block sm:w-[310px]">
+                <span className="sr-only">Buscar en Open Studio...</span>
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-2" strokeWidth={1.7} />
+                <input
+                  type="search"
+                  placeholder="Buscar en Open Studio..."
+                  className="h-10 w-full rounded-[9px] border border-line bg-card px-10 pr-14 text-[13px] text-ink placeholder:text-ink-2 transition duration-200 hover:border-line-hi focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
+                />
+                <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-[5px] border border-line bg-card-hi px-1.5 py-0.5 text-[10px] text-ink-2">
+                  ⌘K
+                </kbd>
+              </label>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border border-line bg-white/[0.025] px-4 text-[13px] font-semibold text-ink-2 transition duration-200 hover:border-line-hi hover:bg-hover hover:text-ink"
+              >
+                <Clock3 className="h-4 w-4" strokeWidth={1.8} />
+                Historial
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-danger-soft border border-danger/20 text-danger text-sm flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            {error}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {PRESETS.map((preset) => {
+              const Icon = preset.icon;
+              const active = activePreset === preset.id;
+              return (
+                <button
+                  type="button"
+                  key={preset.id}
+                  onClick={() => applyPreset(preset.id)}
+                  className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-[8px] border px-4 text-[13px] font-semibold transition duration-200 ${
+                    active
+                      ? "border-accent/55 bg-accent-soft text-accent-hi shadow-[0_10px_28px_rgba(208,111,167,0.10)]"
+                      : "border-line bg-card text-ink-2 hover:border-line-hi hover:bg-hover hover:text-ink"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.8} />
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+        </header>
+
+        {(error || status) && (
+          <div
+            className={`flex items-center gap-2 rounded-[10px] border px-4 py-3 text-[13px] ${
+              error ? "border-danger/25 bg-danger-soft text-danger" : "border-accent/20 bg-accent-soft text-accent-hi"
+            }`}
+          >
+            {error ? <AlertTriangle className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+            {error || status}
           </div>
         )}
 
-        {/* Main Grid */}
-        <div className="flex-1 grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-5 min-h-0">
-          {/* ── Left Panel: Settings ───────────────────────────────── */}
-          <div className="min-h-0 bg-card border border-line rounded-lg p-5 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-ink mb-5 flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-accent" />
-              {t("thumbnails.settings")}
-            </h3>
-
-            <div className={sectionClass}>
-              {/* Video Topic */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.topic")}</label>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)_300px] 2xl:grid-cols-[320px_minmax(0,1fr)_330px]">
+          <Card className="min-w-0 overflow-hidden">
+            <div className="border-b border-line px-5 py-4">
+              <h2 className="text-[15px] font-semibold text-ink">Configuración</h2>
+            </div>
+            <div className="space-y-4 p-5">
+              <Field label="TEMA DEL VIDEO">
                 <input
-                  type="text"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder={t("thumbnails.topicPlaceholder")}
-                  className={inputClass}
+                  value={config.topic}
+                  onChange={(event) => updateConfig("topic", event.target.value)}
+                  className="h-10 w-full rounded-[8px] border border-line bg-card-hi px-3 text-[12px] font-medium text-ink placeholder:text-ink-3 transition duration-200 hover:border-line-hi focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
+                  placeholder="MiniMax M2.7 construyó mi fábrica de contenido"
                 />
-              </div>
+              </Field>
 
-              {/* Video Title */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.titleLabel")}</label>
+              <Field label="TÍTULO" aside={<span className="text-[10px] text-ink-3">{config.title.length}/100</span>}>
                 <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={config.title}
+                  maxLength={100}
+                  onChange={(event) => updateConfig("title", event.target.value)}
+                  className="h-10 w-full rounded-[8px] border border-line bg-card-hi px-3 text-[12px] font-medium text-ink placeholder:text-ink-3 transition duration-200 hover:border-line-hi focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
                   placeholder="5 AI Tools in 2024"
-                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              {/* Hook Text */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.hookText")}</label>
+              <Field
+                label="TEXTO DE IMPACTO"
+                aside={<span className="text-[10px] text-ink-3">{config.impactText.length}/40</span>}
+                help={
+                  impactWordCount > 6 ? (
+                    <span className="text-warn">Para mejor lectura, usa 2-5 palabras.</span>
+                  ) : (
+                    "2-5 palabras ideal para YouTube"
+                  )
+                }
+              >
                 <input
-                  type="text"
-                  value={hookText}
-                  onChange={(e) => setHookText(e.target.value)}
-                  placeholder={t("thumbnails.hookTextPlaceholder")}
-                  className={inputClass}
+                  value={config.impactText}
+                  maxLength={40}
+                  onChange={(event) => updateConfig("impactText", event.target.value)}
+                  className="h-10 w-full rounded-[8px] border border-line bg-card-hi px-3 text-[12px] font-medium text-ink placeholder:text-ink-3 transition duration-200 hover:border-line-hi focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
+                  placeholder="FÁBRICA DE CONTENIDO"
                 />
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[11px] text-ink-3">{t("thumbnails.hookTextHelp")}</span>
-                  {hookText && (
-                    <span
-                      className={`text-[11px] font-medium ${
-                        hookValidation.wordCount > 7
-                          ? "text-warn"
-                          : hookValidation.wordCount > 5
-                            ? "text-ink-3"
-                            : "text-ok"
-                      }`}
-                    >
-                      {hookValidation.wordCount} {t("thumbnails.wordCount")}
-                      {hookValidation.wordCount > 7 && ` — ${t("thumbnails.wordWarning")}`}
-                    </span>
-                  )}
-                </div>
-              </div>
+              </Field>
 
-              {/* Audience */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.audience")}</label>
-                <div className="relative">
-                  <select value={audience} onChange={(e) => setAudience(e.target.value)} className={selectClass}>
-                    {AUDIENCE_OPTIONS.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {optionText("audienceOption", a.id, a.label)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
+              <Field label="AUDIENCIA">
+                <SelectField ariaLabel="Audiencia" value={config.audience} onChange={(value) => updateConfig("audience", value)} options={AUDIENCE_OPTIONS} />
+              </Field>
 
-              {/* Style */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.style")}</label>
-                <div className="relative">
-                  <select value={style} onChange={(e) => setStyle(e.target.value)} className={selectClass}>
-                    {THUMBNAIL_STYLES.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {optionText("styleOption", s.id, s.label)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-                <p className="text-[11px] text-ink-3 mt-1">
-                  {selectedStyle ? optionText("styleDescription", selectedStyle.id, selectedStyle.description) : ""}
-                </p>
-              </div>
+              <Field label="ESTILO VISUAL">
+                <SelectField ariaLabel="Estilo visual" value={config.visualStyle} onChange={(value) => updateConfig("visualStyle", value)} options={STYLE_OPTIONS} />
+              </Field>
 
-              {/* Mood */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.mood")}</label>
-                <div className="relative">
-                  <select value={mood} onChange={(e) => setMood(e.target.value)} className={selectClass}>
-                    {MOOD_OPTIONS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {moodText(m.id, m.label)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
+              <Field label="AMBIENTE">
+                <SelectField ariaLabel="Ambiente" value={config.mood} onChange={(value) => updateConfig("mood", value)} options={MOOD_OPTIONS} />
+              </Field>
 
-              {/* Background */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.background")}</label>
-                <div className="relative">
-                  <select value={background} onChange={(e) => setBackground(e.target.value)} className={selectClass}>
-                    {BACKGROUND_OPTIONS.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {optionText("backgroundOption", b.id, b.label)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
+              <Field label="FONDO">
+                <SelectField ariaLabel="Fondo" value={config.background} onChange={(value) => updateConfig("background", value)} options={BACKGROUND_OPTIONS} />
+              </Field>
 
-              {/* Color Preference */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.colorPreference")}</label>
+              <Field label="PREFERENCIA DE COLOR">
                 <div className="relative">
-                  <select value={colorPreference} onChange={(e) => setColorPreference(e.target.value)} className={selectClass}>
-                    {COLOR_PRESETS.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {optionText("colorOption", c.id, c.label)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Brand */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.brand")}</label>
-                <div className="relative">
-                  <select value={brand} onChange={(e) => setBrand(e.target.value)} className={selectClass}>
-                    {BRAND_OPTIONS.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {optionText("brandOption", b.id, b.label)}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-                {brand === "custom" && (
-                  <input
-                    type="text"
-                    value={customBrand}
-                    onChange={(e) => setCustomBrand(e.target.value)}
-                    placeholder={t("thumbnails.customBrandPlaceholder")}
-                    className={`${inputClass} mt-2`}
+                  <span
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-7 -translate-y-1/2 rounded-[5px] border border-white/15"
+                    style={{ background: `linear-gradient(135deg, ${selectedColor.colors[0]}, ${selectedColor.colors[1]})` }}
                   />
-                )}
-              </div>
-
-              {/* Reference Image URL */}
-              <div>
-                <label className={labelClass}>Imagem de referência</label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Link className="w-3.5 h-3.5 text-ink-3" />
-                  </div>
-                  <input
-                    type="url"
-                    value={referenceImageUrl}
-                    onChange={(e) => setReferenceImageUrl(e.target.value)}
-                    placeholder="https://i.imgur.com/suafoto.jpg"
-                    className={`${inputClass} pl-8`}
-                  />
-                  {referenceImageUrl && (
-                    <button
-                      onClick={() => setReferenceImageUrl("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                {referenceImageUrl && hasUsableReferenceImage && (
-                  <div className="mt-2 rounded-xl overflow-hidden border border-line aspect-video bg-card-hi relative">
-                    <Image src={referenceImageUrl} alt="Reference preview" fill className="object-cover" sizes="360px" unoptimized />
-                  </div>
-                )}
-                {referenceImageUrl && !hasUsableReferenceImage && (
-                  <p className="text-[11px] text-warn mt-1">URL deve começar com https://</p>
-                )}
-              </div>
-
-              {/* Toggles */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-ink">{t("thumbnails.includeFace")}</span>
-                  <button
-                    onClick={() => setIncludeFace(!includeFace)}
-                    className={`w-10 h-5 rounded-full transition-all ${includeFace ? "bg-accent" : "bg-line"} relative`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${includeFace ? "left-5" : "left-0.5"}`}
-                    />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-ink">{t("thumbnails.includeText")}</span>
-                  <button
-                    onClick={() => {
-                      const next = !includeText;
-                      setIncludeText(next);
-                      if (!next) setSafeTextMode(false);
-                    }}
-                    className={`w-10 h-5 rounded-full transition-all ${includeText ? "bg-accent" : "bg-line"} relative`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${includeText ? "left-5" : "left-0.5"}`}
-                    />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-ink">{t("thumbnails.includeLogo")}</span>
-                  <button
-                    onClick={() => setIncludeLogo(!includeLogo)}
-                    className={`w-10 h-5 rounded-full transition-all ${includeLogo ? "bg-accent" : "bg-line"} relative`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${includeLogo ? "left-5" : "left-0.5"}`}
-                    />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-ink">{t("thumbnails.safeTextMode")}</span>
-                    <div className="group relative">
-                      <Info className="w-3.5 h-3.5 text-ink-3 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 rounded-lg bg-card-hi border border-line text-[11px] text-ink-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                        {t("thumbnails.safeTextModeHelp")}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const next = !safeTextMode;
-                      setSafeTextMode(next);
-                      if (next) setIncludeText(false);
-                    }}
-                    className={`w-10 h-5 rounded-full transition-all ${safeTextMode ? "bg-accent" : "bg-line"} relative`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${safeTextMode ? "left-5" : "left-0.5"}`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              {/* Variations */}
-              <div>
-                <label className={labelClass}>{t("thumbnails.variations")}</label>
-                <div className="relative">
                   <select
-                    value={variations}
-                    onChange={(e) => setVariations(Number(e.target.value))}
-                    className={selectClass}
+                    aria-label="Preferencia de color"
+                    value={config.colorPreference}
+                    onChange={(event) => updateConfig("colorPreference", event.target.value)}
+                    className="h-10 w-full appearance-none rounded-[8px] border border-line bg-card-hi py-0 pl-12 pr-9 text-[12px] font-medium text-ink transition duration-200 hover:border-line-hi focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
                   >
-                    {[1, 2, 4].map((n) => (
-                      <option key={n} value={n}>
-                        {n} {n === 1 ? "thumbnail" : "thumbnails"}
+                    {COLOR_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="w-4 h-4 text-ink-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" strokeWidth={1.7} />
                 </div>
-              </div>
-
-              {/* Quality Tips */}
-              {qualityTips.length > 0 && (
-                <div className="p-3 rounded-xl bg-accent-soft/30 border border-accent/10">
-                  <h4 className="text-[11px] font-semibold text-accent mb-2 flex items-center gap-1">
-                    <Info className="w-3 h-3" />
-                    {t("thumbnails.qualityTips")}
-                  </h4>
-                  <ul className="space-y-1">
-                    {qualityTips.map((tip, i) => (
-                      <li key={i} className="text-[11px] text-ink-2 leading-relaxed">
-                        {tip}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              </Field>
             </div>
 
-            {/* Editable Prompt */}
-            {prompt && (
-              <div className="mt-5 pt-5 border-t border-line">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-semibold text-ink-2 uppercase tracking-wide">Prompt de imagem</label>
-                  <button
-                    onClick={() => setPrompt(generatedPrompt)}
-                    className="text-[10px] text-ink-3 hover:text-accent transition-colors flex items-center gap-1"
-                    title="Resetar para o prompt gerado"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Resetar
-                  </button>
-                </div>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-xl bg-hover border border-line text-ink text-[11px] leading-relaxed p-3 resize-y focus:outline-none focus:border-accent/50 placeholder:text-ink-3"
-                  placeholder="Edite o prompt antes de gerar..."
-                />
-                <p className="text-[10px] text-ink-3 mt-1">{prompt.length} / 1490 chars</p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-2 mt-5 pt-5 border-t border-line">
+            <div className="border-t border-line">
               <button
-                onClick={handleGeneratePrompt}
-                disabled={generatingPrompt || !canGenerate}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-hover border border-line text-ink text-sm font-medium hover:bg-line transition-all disabled:opacity-50"
+                type="button"
+                onClick={() => setAdvancedOpen((open) => !open)}
+                className="flex w-full items-center justify-between px-5 py-4 text-[13px] font-medium text-ink-2 transition hover:bg-hover hover:text-ink"
               >
-                {generatingPrompt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-accent" />}
-                {t("thumbnails.generatePrompt")}
+                Opciones avanzadas
+                <ChevronDown className={`h-4 w-4 transition ${advancedOpen ? "rotate-180" : ""}`} strokeWidth={1.7} />
               </button>
-              <button
-                onClick={() => handleGenerateImage()}
-                disabled={loading || !prompt}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl btn-brand text-sm font-medium transition-all disabled:opacity-50"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-                {loading ? t("thumbnails.generating") : t("thumbnails.generate")}
-              </button>
-            </div>
-          </div>
-
-          {/* ── Right Panel: Output ────────────────────────────────── */}
-          <div className="min-h-0 bg-card border border-line rounded-lg p-5 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-ink">
-                {results ? t("thumbnails.generated") : t("thumbnails.preview")}
-              </h3>
-              {results && (
-                <button
-                  onClick={() => setShowPrompt(!showPrompt)}
-                  className="text-[11px] text-ink-3 hover:text-ink transition-colors"
-                >
-                  {showPrompt ? "Hide" : "Show"} {t("thumbnails.promptUsed")}
-                </button>
-              )}
-            </div>
-
-            {/* Prompt Display */}
-            {showPrompt && results?.finalPrompt && (
-              <div className="mb-4 p-3 rounded-xl bg-card-hi border border-line">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-medium text-ink-2">{t("thumbnails.promptUsed")}</span>
-                  <button
-                    onClick={handleCopyPrompt}
-                    className="flex items-center gap-1 text-[11px] text-accent hover:text-accent-hi transition-colors"
-                  >
-                    {copiedPrompt ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copiedPrompt ? "Copied!" : t("thumbnails.copyPrompt")}
-                  </button>
-                </div>
-                <p className="text-[11px] text-ink-3 leading-relaxed line-clamp-4">{results.finalPrompt}</p>
-              </div>
-            )}
-
-            {/* Loading */}
-            {loading && (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <Loader2 className="w-10 h-10 text-accent animate-spin" />
-                <span className="text-sm text-ink-2">{t("thumbnails.generatingMsg")}</span>
-              </div>
-            )}
-
-            {/* Results */}
-            {!loading && results?.urls?.length ? (
-              <>
-                <div className={`grid gap-4 ${results.urls.length >= 3 ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
-                  {results.urls.map((url, i) => (
-                    <div
-                      key={i}
-                      className="group relative aspect-video rounded-xl overflow-hidden bg-card-hi border border-line hover:border-line-hi transition-all"
-                    >
-                      <Image
-                        src={url}
-                        alt={`Thumbnail ${i + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        unoptimized
-                      />
-                      {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleDownload(url, i)}
-                            className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition-all"
-                            title="Download"
-                          >
-                            <Download className="w-4 h-4 text-white" />
-                          </button>
-                          <button
-                            onClick={handleCopyPrompt}
-                            className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition-all"
-                            title="Copy Prompt"
-                          >
-                            <Copy className="w-4 h-4 text-white" />
-                          </button>
-                          <button
-                            onClick={() => toggleFavorite(url)}
-                            className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition-all"
-                            title="Favorite"
-                          >
-                            <Star
-                              className={`w-4 h-4 ${favoriteUrls.has(url) ? "text-amber-400 fill-amber-400" : "text-white"}`}
-                            />
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleGenerateImage(results?.finalPrompt)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm hover:bg-white/25 transition-all"
-                          >
-                            <RefreshCw className="w-3 h-3 text-white" />
-                            <span className="text-xs text-white">{t("thumbnails.regenerate")}</span>
-                          </button>
-                          {safeTextMode && (
-                            <button
-                              onClick={() => {
-                                setEditingOverlayUrl(url);
-                                setEditingOverlayIndex(i);
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/80 backdrop-blur-sm hover:bg-accent transition-all"
-                            >
-                              <Type className="w-3 h-3 text-white" />
-                              <span className="text-xs text-white">Edit Text</span>
-                            </button>
-                          )}
-                        </div>
+              {advancedOpen ? (
+                <div className="space-y-3 border-t border-line px-5 py-4">
+                  <Toggle label="Incluir rostro" checked={config.includeFace} onChange={(value) => updateConfig("includeFace", value)} />
+                  <Toggle label="Incluir logo" checked={config.includeLogo} onChange={(value) => updateConfig("includeLogo", value)} />
+                  <Toggle label="Incluir texto" checked={config.includeText} onChange={(value) => updateConfig("includeText", value)} />
+                  <Toggle label="Modo text overlay seguro" checked={config.safeTextMode} onChange={(value) => updateConfig("safeTextMode", value)} />
+                  <Field label="Número de variaciones">
+                    <SelectField
+                      ariaLabel="Número de variaciones"
+                      value={String(config.variations)}
+                      onChange={(value) => updateConfig("variations", Number(value))}
+                      options={["1", "2", "3", "4"]}
+                    />
+                  </Field>
+                  <Field label="Formato">
+                    <SelectField ariaLabel="Formato" value="16:9" onChange={() => undefined} options={["16:9"]} />
+                  </Field>
+                  <Field label="Resolución">
+                    <SelectField
+                      ariaLabel="Resolución"
+                      value={config.resolution}
+                      onChange={(value) => updateConfig("resolution", value as ThumbnailConfig["resolution"])}
+                      options={["1280x720", "1920x1080"]}
+                    />
+                  </Field>
+                  <div className="rounded-[10px] border border-line bg-card-hi/45 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[12px] font-semibold text-ink">Referencia de imagen</p>
+                        <p className="mt-1 text-[11px] leading-4 text-ink-3">JPG, PNG o WebP. Se usa como referencia real si el provider la soporta.</p>
                       </div>
-                      {/* Badge */}
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[11px] text-white font-medium">
-                        Variation {i + 1}
-                      </span>
-                      {/* Favorite indicator */}
-                      {favoriteUrls.has(url) && (
-                        <span className="absolute top-2 right-2">
-                          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Text Overlay Editor */}
-                {safeTextMode && editingOverlayUrl && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold text-ink">Edit Text Overlay — Variation {editingOverlayIndex + 1}</h4>
                       <button
-                        onClick={() => {
-                          setEditingOverlayUrl(null);
-                          setEditingOverlayIndex(0);
-                        }}
-                        className="text-xs text-ink-3 hover:text-ink transition-colors"
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-line bg-white/[0.025] px-3 text-[12px] font-semibold text-ink-2 transition hover:border-line-hi hover:bg-hover hover:text-ink"
                       >
-                        Close Editor
+                        <Upload className="h-4 w-4" />
+                        Subir
                       </button>
                     </div>
-                    <TextOverlayEditor
-                      baseImageUrl={editingOverlayUrl}
-                      defaultText={hookText}
-                    />
+                    <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleReferenceUpload} />
+                    {config.referenceImage ? (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="relative aspect-video w-24 overflow-hidden rounded-[8px] border border-line bg-card">
+                          <Image src={config.referenceImage} alt="Referencia de imagen" fill className="object-cover" unoptimized />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => updateConfig("referenceImage", "")}
+                          className="text-[12px] font-semibold text-ink-3 transition hover:text-ink"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                )}
-              </>
-            ) : !loading && generatedPrompt ? (
-              /* Generated Prompt State */
-              <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-                <Sparkles className="w-8 h-8 text-accent mb-2" />
-                <p className="text-sm text-ink-2">{t("thumbnails.promptGenerated")}</p>
-                <div className="max-w-md p-4 rounded-xl bg-card-hi border border-line">
-                  <p className="text-xs text-ink-3 leading-relaxed line-clamp-6">{generatedPrompt}</p>
                 </div>
+              ) : null}
+              <div className="border-t border-line p-5">
                 <button
-                  onClick={() => handleGenerateImage()}
-                  className="mt-2 px-5 py-2.5 rounded-xl btn-brand text-sm font-medium transition-all"
+                  type="button"
+                  onClick={() => generateImages()}
+                  disabled={loading || !canGenerate}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[9px] bg-accent px-5 text-[13px] font-semibold text-accent-fg shadow-[0_12px_34px_rgba(208,111,167,0.18)] transition duration-200 hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-45"
                 >
-                  {t("thumbnails.generateFromPrompt")}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" strokeWidth={1.8} />}
+                  {loading ? "Generando..." : "Generar miniatura"}
                 </button>
               </div>
-            ) : !loading ? (
-              /* Empty State */
-              <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                <div className="w-16 h-16 rounded-lg bg-card-hi border border-line flex items-center justify-center">
-                  <ImagePlus className="w-8 h-8 text-ink-3" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-ink mb-1">{t("thumbnails.emptyTitle")}</p>
-                  <p className="text-xs text-ink-3">{t("thumbnails.emptySubtitle")}</p>
-                </div>
-                {qualityTips.length > 0 && (
-                  <div className="max-w-sm p-3 rounded-xl bg-accent-soft/20 border border-accent/10 mt-2">
-                    <p className="text-[11px] font-medium text-accent mb-1.5">{t("thumbnails.qualityTips")}</p>
-                    <ul className="space-y-1">
-                      {qualityTips.slice(0, 2).map((tip, i) => (
-                        <li key={i} className="text-[11px] text-ink-2">{tip}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            </div>
+          </Card>
+
+          <Card className="min-w-0 p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-[15px] font-semibold text-ink">Vista previa</h2>
+                <span className="rounded-[7px] border border-line bg-card-hi px-2 py-1 text-[11px] font-medium text-ink-2">1920 × 1080</span>
               </div>
-            ) : null}
-          </div>
+              <button
+                type="button"
+                onClick={downloadSelected}
+                disabled={!selectedUrl}
+                className="hidden h-9 items-center gap-2 rounded-[8px] border border-line bg-white/[0.025] px-3 text-[12px] font-semibold text-ink-2 transition hover:border-line-hi hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 sm:inline-flex"
+              >
+                <Download className="h-4 w-4" />
+                Descargar
+              </button>
+            </div>
+
+            <div className="relative aspect-video overflow-hidden rounded-[12px] border border-line bg-[#10121a]">
+              {loading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-card-hi">
+                  <Loader2 className="h-9 w-9 animate-spin text-accent" />
+                  <p className="text-[13px] font-medium text-ink-2">Generando miniatura...</p>
+                </div>
+              ) : selectedUrl ? (
+                <Image src={selectedUrl} alt="Miniatura generada" fill className="object-cover" sizes="(max-width: 1280px) 100vw, 50vw" unoptimized />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                  <div className="mb-4 grid h-14 w-14 place-items-center rounded-[12px] border border-line bg-card">
+                    <ImagePlus className="h-7 w-7 text-accent" strokeWidth={1.7} />
+                  </div>
+                  <p className="text-[15px] font-semibold text-ink">Configura tu miniatura y genera una primera versión.</p>
+                  <p className="mt-2 max-w-[42ch] text-[13px] leading-5 text-ink-2">
+                    El preview mostrará solo imágenes generadas por tu provider activo. No usamos mocks como resultado real.
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => selectedUrl && setFullscreenOpen(true)}
+                disabled={!selectedUrl}
+                className="absolute bottom-3 right-3 inline-flex h-9 items-center gap-2 rounded-[8px] border border-white/15 bg-black/45 px-3 text-[12px] font-semibold text-white backdrop-blur-sm transition hover:bg-black/65 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <Expand className="h-4 w-4" strokeWidth={1.8} />
+                Pantalla completa
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-[15px] font-semibold text-ink">Variaciones generadas</h3>
+                {result?.urls?.length ? <span className="text-[12px] text-ink-3">{result.urls.length} disponibles</span> : null}
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {(result?.urls?.length ? result.urls : [null, null, null, null]).map((url, index) => (
+                  <button
+                    type="button"
+                    key={url ?? `empty-${index}`}
+                    disabled={!url}
+                    onClick={() => setSelectedIndex(index)}
+                    className={`group relative aspect-video w-[150px] shrink-0 overflow-hidden rounded-[10px] border bg-card-hi transition duration-200 sm:w-[178px] ${
+                      url && selectedIndex === index
+                        ? "border-accent shadow-[0_0_0_1px_rgba(208,111,167,0.22),0_12px_28px_rgba(208,111,167,0.12)]"
+                        : "border-line hover:border-line-hi"
+                    } ${!url ? "cursor-default opacity-55" : ""}`}
+                  >
+                    {url ? <Image src={url} alt={`Variación ${index + 1}`} fill className="object-cover" sizes="180px" unoptimized /> : null}
+                    {!url ? <span className="absolute inset-0 grid place-items-center text-[11px] text-ink-3">Sin generar</span> : null}
+                    <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-[6px] bg-black/45 text-white opacity-90">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => generateImages(4, true)}
+                  disabled={variationsLoading || loading || !canGenerate}
+                  className="inline-flex h-10 items-center gap-2 rounded-[9px] border border-accent/45 bg-card px-5 text-[13px] font-semibold text-accent transition duration-200 hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {variationsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" strokeWidth={1.8} />}
+                  Generar más variaciones
+                </button>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="min-w-0 p-5">
+            <div className="mb-5 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-accent" strokeWidth={1.8} />
+              <h2 className="text-[15px] font-semibold text-ink">Asistente de IA</h2>
+            </div>
+
+            <div className="space-y-4">
+              <AssistantPanel title="Sugerencia de IA" icon={<Lightbulb className="h-4 w-4" strokeWidth={1.8} />}>
+                <p className="text-[12px] leading-5 text-ink-2">
+                  Los rostros con expresión sorprendida + texto grande en alto contraste pueden aumentar el CTR hasta un 32%.
+                </p>
+                <button
+                  type="button"
+                  onClick={applySuggestion}
+                  className="mt-4 inline-flex h-9 items-center gap-2 rounded-[8px] border border-accent/25 bg-accent-soft px-3 text-[12px] font-semibold text-accent-hi transition hover:border-accent/45 hover:bg-accent-soft/80"
+                >
+                  <Sparkles className="h-4 w-4" strokeWidth={1.8} />
+                  Aplicar sugerencia
+                </button>
+              </AssistantPanel>
+
+              <AssistantPanel title="Paleta recomendada" icon={<Palette className="h-4 w-4" strokeWidth={1.8} />}>
+                <div className="flex gap-2">
+                  {selectedColor.colors.map((color, index) => (
+                    <button
+                      type="button"
+                      key={`${color}-${index}`}
+                      aria-label={`Aplicar color ${index + 1}`}
+                      onClick={() => {
+                        updateConfig("colorPreference", selectedColor.id);
+                        showStatus("Paleta aplicada");
+                      }}
+                      className="h-8 flex-1 rounded-[6px] border border-white/12 transition hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-accent/30"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </AssistantPanel>
+
+              <AssistantPanel title="Hooks recomendados" icon={<Zap className="h-4 w-4" strokeWidth={1.8} />}>
+                <div className="space-y-1">
+                  {HOOKS.map((hook) => (
+                    <button
+                      type="button"
+                      key={hook}
+                      onClick={() => {
+                        updateConfig("impactText", hook.slice(0, 40));
+                        showStatus("Hook aplicado");
+                      }}
+                      className="flex w-full items-center gap-2 rounded-[7px] py-2 text-left text-[12px] text-ink-2 transition hover:bg-hover hover:text-ink"
+                    >
+                      <Zap className="h-3.5 w-3.5 shrink-0 text-accent" fill="currentColor" strokeWidth={1.8} />
+                      {hook}
+                    </button>
+                  ))}
+                </div>
+              </AssistantPanel>
+
+              <AssistantPanel title="Buenas prácticas" icon={<Info className="h-4 w-4" strokeWidth={1.8} />}>
+                <ul className="space-y-2">
+                  {["Usa 3–6 palabras máximo", "Alto contraste de color", "Rostro + emoción = más clics", "Texto legible en móvil"].map((tip) => (
+                    <li key={tip} className="flex items-center gap-2 text-[12px] text-ink-2">
+                      <Check className="h-3.5 w-3.5 shrink-0 rounded-full text-ok" strokeWidth={2.3} />
+                      {tip}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-5 flex items-start gap-2 text-[11px] leading-4 text-ink-3">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>Consejos basados en análisis de miles de miniaturas exitosas.</span>
+                </div>
+              </AssistantPanel>
+            </div>
+          </Card>
         </div>
       </div>
+
+      {fullscreenOpen && selectedUrl ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/82 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            onClick={() => setFullscreenOpen(false)}
+            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-[9px] border border-white/15 bg-white/10 text-white transition hover:bg-white/15"
+            aria-label="Cerrar pantalla completa"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="relative aspect-video w-full max-w-6xl overflow-hidden rounded-[14px] border border-white/15 bg-card">
+            <Image src={selectedUrl} alt="Miniatura en pantalla completa" fill className="object-contain" unoptimized />
+          </div>
+        </div>
+      ) : null}
+
+      {historyOpen ? (
+        <div className="fixed inset-0 z-[70] flex justify-end bg-black/55 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <button type="button" aria-label="Cerrar historial" className="absolute inset-0 cursor-default" onClick={() => setHistoryOpen(false)} />
+          <aside className="relative h-full w-full max-w-[380px] border-l border-line bg-card p-5 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-[16px] font-semibold text-ink">Historial</h2>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(false)}
+                className="grid h-8 w-8 place-items-center rounded-[8px] border border-line text-ink-2 transition hover:bg-hover hover:text-ink"
+                aria-label="Cerrar historial"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {result?.urls?.length ? (
+                result.urls.map((url, index) => (
+                  <button
+                    type="button"
+                    key={url}
+                    onClick={() => {
+                      setSelectedIndex(index);
+                      setHistoryOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-[10px] border border-line bg-card-hi/45 p-2 text-left transition hover:border-line-hi hover:bg-hover"
+                  >
+                    <span className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-[7px] border border-line">
+                      <Image src={url} alt={`Historial ${index + 1}`} fill className="object-cover" unoptimized />
+                    </span>
+                    <span>
+                      <span className="block text-[13px] font-semibold text-ink">Miniatura generada v{index + 1}</span>
+                      <span className="mt-1 block text-[12px] text-ink-3">Sesión actual</span>
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-[10px] border border-line bg-card-hi/45 p-4 text-[13px] leading-5 text-ink-2">
+                  Aún no hay miniaturas generadas en esta sesión.
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </main>
   );
 }

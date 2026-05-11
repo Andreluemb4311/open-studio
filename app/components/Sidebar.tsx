@@ -5,30 +5,23 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import NextImage from "next/image";
 import {
-  Music,
   Box,
   FileText,
   Home,
   Image,
   Layers,
-  Download,
   Menu,
   Settings,
   X,
 } from "lucide-react";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const navItems = [
   { icon: Home, label: "Inicio", href: "/" },
   { icon: Layers, label: "Pipeline", href: "/pipeline" },
   { icon: FileText, label: "Guiones", href: "/scripts" },
   { icon: Image, label: "Miniaturas", href: "/thumbnails" },
-  { icon: Music, label: "Música", href: "/music" },
   { icon: Box, label: "Assets", href: "/assets" },
-];
-
-const bottomItems = [
-  { icon: Download, label: "Descargas", href: "/exports" },
-  { icon: Settings, label: "Ajustes", href: "/settings" },
 ];
 
 export function Sidebar() {
@@ -81,34 +74,33 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="space-y-[22px] px-[11px] pb-[24px]">
-        {bottomItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={`${item.href}-${item.label}`}
-              href={item.href}
-              title={item.label}
-              onClick={() => setMobileOpen(false)}
-              className={`
-                relative flex h-10 w-full items-center justify-center rounded-[7px]
-                transition-all duration-200 ease-out
-                ${
-                  active
-                    ? "bg-[#141620] text-accent"
-                    : "text-[#8D91A0] hover:bg-white/[0.045] hover:text-[#F5F2F4]"
-                }
-              `}
-            >
-              <Icon className="h-5 w-5" strokeWidth={1.5} />
-              {active && (
-                <span className="absolute left-0 top-1/2 h-[34px] w-px -translate-y-1/2 rounded-r-full bg-accent" />
-              )}
-            </Link>
-          );
-        })}
+      <div className="flex flex-col items-center gap-[18px] px-[11px] pb-[24px]">
+        {/* Language switcher — troca o idioma de toda a interface */}
+        <div className="flex h-10 w-full items-center justify-center">
+          <LanguageSwitcher />
+        </div>
 
+        {/* Settings */}
+        <Link
+          href="/settings"
+          title="Ajustes"
+          className={`
+            relative flex h-10 w-full items-center justify-center rounded-[7px]
+            transition-all duration-200 ease-out
+            ${
+              isActive("/settings")
+                ? "bg-[#141620] text-accent"
+                : "text-[#8D91A0] hover:bg-white/[0.045] hover:text-[#F5F2F4]"
+            }
+          `}
+        >
+          <Settings className="h-5 w-5" strokeWidth={1.5} />
+          {isActive("/settings") && (
+            <span className="absolute left-0 top-1/2 h-[34px] w-px -translate-y-1/2 rounded-r-full bg-accent" />
+          )}
+        </Link>
+
+        {/* Avatar */}
         <div className="flex h-[51px] w-full items-center justify-center pt-[7px]">
           <div className="flex h-[46px] w-[46px] items-center justify-center rounded-full border border-white/[0.08] bg-[#0E1018]">
             <NextImage

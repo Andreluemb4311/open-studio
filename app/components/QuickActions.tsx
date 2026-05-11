@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Box, FileText, Image as ImageIcon, Music } from "lucide-react";
+import { ArrowRight, Box, FileText, Image as ImageIcon } from "lucide-react";
 
 const quickActions = [
   { href: "/scripts", icon: FileText, label: "Nuevo guion" },
   { href: "/thumbnails", icon: ImageIcon, label: "Nueva miniatura" },
-  { href: "/music", icon: Music, label: "Nueva música" },
   { href: "/pipeline", icon: Box, label: "Nuevo pipeline" },
 ];
 
