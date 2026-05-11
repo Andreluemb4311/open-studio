@@ -1,10 +1,10 @@
 import { writeFile, mkdir } from "fs/promises";
-import { join, resolve, normalize, relative } from "path";
+import { join, normalize, relative, resolve } from "path";
+import { DATA_DIR } from "@/lib/storage/db";
 
-const DATA_DIR = resolve(process.cwd(), "data");
 const FILES_DIR = join(DATA_DIR, "files");
 
-const subdirs = ["scripts", "thumbnails", "music", "video", "exports"];
+const subdirs = ["scripts", "thumbnails", "images", "packages", "exports"];
 
 /**
  * Validates that a path stays within the allowed directory.
@@ -52,7 +52,7 @@ export async function downloadFile(url: string, destPath: string): Promise<strin
   const buffer = Buffer.from(await response.arrayBuffer());
   const fullPath = sanitizePath(DATA_DIR, destPath);
 
-  const dir = fullPath.substring(0, fullPath.lastIndexOf("\\"));
+  const dir = fullPath.substring(0, Math.max(fullPath.lastIndexOf("\\"), fullPath.lastIndexOf("/")));
   await mkdir(dir, { recursive: true });
 
   await writeFile(fullPath, buffer);

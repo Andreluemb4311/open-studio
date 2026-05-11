@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { Play } from "lucide-react";
 
 interface ProjectCardProps {
@@ -14,10 +15,12 @@ export function ProjectCard({ imageUrl, title, category, time }: ProjectCardProp
     <div className="group relative bg-card border border-line rounded-lg overflow-hidden hover:border-line-hi hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
       {/* Image */}
       <div className="relative aspect-video overflow-hidden">
-        <img
+        <NextImage
           src={imageUrl}
           alt={title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 

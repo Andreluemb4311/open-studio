@@ -44,7 +44,6 @@ MINIMAX_API_KEY_TYPE=pay_as_you_go
 MINIMAX_BASE_URL=https://api.minimax.io
 MINIMAX_TEXT_MODEL=MiniMax-M2.7
 MINIMAX_IMAGE_MODEL=image-01
-MINIMAX_MUSIC_MODEL=music-2.6
 ```
 
 See [minimax-api.md](minimax-api.md) for details on each variable.
@@ -107,18 +106,18 @@ npm run test:e2e
 
 ## Where data is stored
 
-All generated content, settings, and assets are stored in the `/data` directory:
+All generated content, settings, and assets are stored in the `.open-studio/` directory:
 
 ```
-data/
+.open-studio/
   settings.json   # API key and preferences
-  assets.json     # All generated assets (scripts, thumbnails, music)
+  assets.json     # All generated assets (scripts, thumbnails, packages)
   exports.json    # Pipeline exports
-  files/          # Downloaded binary files (images, audio)
+  files/          # Generated and uploaded local files
     thumbnails/
-    music/
     scripts/
-    video/
+    packages/
+    exports/
 ```
 
 This directory is **git-ignored**. Your data stays on your machine.

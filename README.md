@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
 
-Open Studio is an open-source creator workspace for generating and organizing scripts, thumbnails, captions, descriptions, hashtags and creative assets in one place.
+Open Studio is an open-source creator workspace for generating and organizing scripts, thumbnails and content packages in one place.
 
 </div>
 
@@ -41,9 +41,8 @@ You bring an idea. Open Studio helps turn it into everything you need to publish
 | # **Hashtags & Tags** | Optimized hashtag sets per platform |
 | 💡 **Post ideas** | Content ideas from a single topic |
 | 🎨 **Creative assets** | Visual assets for posts and stories |
-| 🎵 **Music / jingles** | Simple background music (where supported) |
 | 📦 **Exports** | Organized export of all generated assets |
-| ⚡ **Full pipelines** | idea → script → thumbnail → description → hashtags → export |
+| ⚡ **Full pipelines** | idea → script → title/thumbnail package → export |
 
 ---
 
@@ -65,15 +64,12 @@ You bring an idea. Open Studio helps turn it into everything you need to publish
 
 Open Studio is built to work with multiple AI providers. You connect your own API key and choose which provider to use for each type of content.
 
-**First supported provider:** MiniMax
+Supported provider types:
 
-**Planned provider types:**
 - Text / script generation
-- Image generation
-- Video generation
-- Audio / music generation
-- Voice synthesis
-- Multimodal models
+- Image / thumbnail generation
+- Local OpenAI-compatible LLMs
+- Agent CLI detection for local-first workflows
 
 > Open Studio is not affiliated with MiniMax.
 > MiniMax is one supported integration among others.
@@ -125,15 +121,16 @@ NEXT_PUBLIC_DEMO_MODE=true
 |---|---|
 | Script Generator | ✅ Working |
 | Thumbnail Generator | ✅ Working |
-| Music Generator | ✅ Working |
-| Pipeline Builder | ✅ Working |
+| Content Package Pipeline | ✅ Working |
 | Assets Library | ✅ Working |
 | Exports Manager | ✅ Working |
 | Settings + API Key config | ✅ Working |
 | Demo Mode | ✅ Working |
-| Captions / Descriptions / Hashtags | 🚧 In progress |
-| Multi-provider support | 🚧 In progress |
-| Video Generator | 🚧 Adapter ready, API endpoint pending |
+| Multi-provider support | ✅ Working |
+| Local daemon API surface | ✅ Working |
+| Agent CLI registry | ✅ Working |
+| CTR/SEO title generator | 🗓️ Registered, not implemented |
+| Caption/legenda generator | 🗓️ Registered, not implemented |
 | SQLite storage | 🗓️ Planned |
 | Background jobs / WebSocket | 🗓️ Planned |
 | Export .zip packages | 🗓️ Planned |
@@ -157,16 +154,17 @@ npm run test:e2e     # Run end-to-end tests (Playwright)
 
 ```
 app/
-  (dashboard)/        # Dashboard pages (scripts, thumbnails, music, etc.)
+  (dashboard)/        # Dashboard pages (scripts, thumbnails, pipeline, assets, settings)
   api/                # Next.js API routes (backend)
 components/           # Shared UI components
 lib/
-  providers/          # AI provider clients (MiniMax and future providers)
+  daemon/             # Local daemon-compatible agents, proxy and connection guards
+  providers/          # AI provider clients and provider/model catalog
   storage/            # Local JSON storage (settings, assets, exports)
   prompts/            # Prompt templates
   security/           # Input validation and sanitization
   validation/         # Zod schemas
-data/                 # Local storage (git-ignored, created on first run)
+.open-studio/         # Local storage (git-ignored, created on first run)
 public/               # Static assets
 docs/                 # Documentation
 ```

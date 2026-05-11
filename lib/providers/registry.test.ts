@@ -8,17 +8,19 @@ describe("provider registry", () => {
 
     expect(providers).toContain("minimax");
     expect(providers).toContain("openai-compatible");
+    expect(providers).toContain("openai");
     expect(providers).toContain("anthropic");
     expect(providers).toContain("gemini");
-    expect(providers).toContain("elevenlabs");
+    expect(providers).toContain("ollama");
   });
 
   it("filters providers by capability", () => {
     const textProviders = getManifestsForCapability("text").map((provider) => provider.id);
-    const audioProviders = getManifestsForCapability("audio").map((provider) => provider.id);
+    const imageProviders = getManifestsForCapability("image").map((provider) => provider.id);
 
     expect(textProviders).toContain("openai-compatible");
-    expect(audioProviders).toContain("elevenlabs");
+    expect(textProviders).toContain("ollama");
+    expect(imageProviders).toContain("fal");
   });
 
   it("rejects unsupported provider capability combinations", () => {

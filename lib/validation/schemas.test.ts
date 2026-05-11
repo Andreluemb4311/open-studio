@@ -4,6 +4,7 @@ import {
   assetSchema,
   scriptGenerateSchema,
   thumbnailGenerateSchema,
+  titleGenerateSchema,
   validateOr400,
 } from "./schemas";
 
@@ -21,6 +22,24 @@ describe("settingsSchema", () => {
   it("rejects apiKey too long", () => {
     const result = settingsSchema.safeParse({ apiKey: "x".repeat(501) });
     expect(result.success).toBe(false);
+  });
+
+  it("keeps only allowlisted agent CLI env values", () => {
+    const result = settingsSchema.safeParse({
+      agentCliEnv: {
+        codex: { CODEX_BIN: " codex ", BAD_KEY: "x" },
+        "cursor-agent": { CURSOR_AGENT_BIN: "cursor-agent" },
+        bad: { BAD_KEY: "x" },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.agentCliEnv).toEqual({
+        codex: { CODEX_BIN: "codex" },
+        "cursor-agent": { CURSOR_AGENT_BIN: "cursor-agent" },
+      });
+    }
   });
 });
 
@@ -80,6 +99,24 @@ describe("thumbnailGenerateSchema", () => {
 
   it("rejects missing required fields", () => {
     const result = thumbnailGenerateSchema.safeParse({ theme: "Tech" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("titleGenerateSchema", () => {
+  it("accepts long topics and research notes for title generation", () => {
+    const result = titleGenerateSchema.safeParse({
+      topic: "x".repeat(5000),
+      briefing: "briefing ".repeat(1000),
+      thumbnailConcept: "thumbnail concept ".repeat(500),
+      outlierNotes: "outlier notes ".repeat(500),
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("still rejects empty title topics", () => {
+    const result = titleGenerateSchema.safeParse({ topic: "" });
     expect(result.success).toBe(false);
   });
 });

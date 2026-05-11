@@ -55,8 +55,9 @@ export async function POST(request: Request) {
     if (saveToAssets && result.script) {
       try {
         const title = (result.title as string) ?? `Script - ${briefing.slice(0, 50)}`;
-        const filePath = `files/scripts/${Date.now()}-script.md`;
-        await saveContentFile("scripts", `${Date.now()}-script.md`, String(result.script));
+        const filename = `${Date.now()}-script.md`;
+        const filePath = `files/scripts/${filename}`;
+        await saveContentFile("scripts", filename, String(result.script));
 
         await createAsset({
           type: "script",

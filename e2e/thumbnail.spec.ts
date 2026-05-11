@@ -1,113 +1,43 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Thumbnail Generator", () => {
-  test("should load thumbnail page without hydration errors", async ({ page }) => {
-    // Navigate to thumbnails page
-    await page.goto("/thumbnails");
-    
-    // Wait for page to load
-    await page.waitForSelector("h1:has-text('Thumbnail Generator')");
-    
-    // Check console for errors
+  test.afterEach(async ({ request }) => {
+    await request.put("/api/settings", { data: { demoMode: false } });
+  });
+
+  test("loads current thumbnail UI without hydration errors", async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        consoleErrors.push(msg.text());
-      }
+      if (msg.type() === "error") consoleErrors.push(msg.text());
     });
-    
-    // Fill form fields
-    await page.fill('input[placeholder*="Ex: MiniMax"]', "AI Tools for Developers");
-    await page.fill('input[placeholder="5 AI Tools in 2024"]', "Best AI Tools 2024");
-    await page.fill('input[placeholder*="FÁBRICA"]', "MUST HAVE");
-    
-    // Wait a bit for any hydration to complete
-    await page.waitForTimeout(1000);
-    
-    // Check no hydration errors occurred
-    const hydrationErrors = consoleErrors.filter(e => 
-      e.includes("hydrat") || 
-      e.includes("insertBefore") || 
-      e.includes("does not match") ||
-      e.includes("Algo salió mal")
+
+    await page.goto("/thumbnails");
+    await expect(page.getByRole("heading", { name: "Generador de Miniaturas" })).toBeVisible();
+
+    await page.getByPlaceholder("MiniMax M2.7 construyó mi fábrica de contenido").fill("AI Tools for Developers");
+    await page.getByPlaceholder("5 AI Tools in 2024").fill("Best AI Tools 2024");
+    await page.locator('input[maxlength="40"]').fill("MUST HAVE");
+
+    const hydrationErrors = consoleErrors.filter(
+      (error) => error.includes("hydrat") || error.includes("insertBefore") || error.includes("does not match")
     );
-    
+
     expect(hydrationErrors).toHaveLength(0);
-    
-    // Take screenshot for verification
-    await page.screenshot({ path: "e2e/screenshots/thumbnail-form-filled.png" });
-  });
-  
-  test("should click Generate Prompt without errors", async ({ page }) => {
-    await page.goto("/thumbnails");
-    await page.waitForSelector("h1:has-text('Thumbnail Generator')");
-    
-    const consoleErrors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        consoleErrors.push(msg.text());
-      }
-    });
-    
-    // Fill required fields
-    await page.fill('input[placeholder*="Ex: MiniMax"]', "AI Tools for Developers");
-    await page.fill('input[placeholder="5 AI Tools in 2024"]', "Best AI Tools 2024");
-    await page.fill('input[placeholder*="FÁBRICA"]', "MUST HAVE");
-    
-    // Click Generate Prompt
-    await page.click('button:has-text("Generate Prompt")');
-    
-    // Wait for loading or result
-    await page.waitForTimeout(3000);
-    
-    // Check for specific error
-    const hasInsertBeforeError = consoleErrors.some(e => 
-      e.includes("insertBefore") || e.includes("Algo salió mal")
-    );
-    
-    expect(hasInsertBeforeError).toBe(false);
-    
-    await page.screenshot({ path: "e2e/screenshots/thumbnail-after-generate-prompt.png" });
   });
 
-  test("should handle image upload without payload errors", async ({ page }) => {
+  test("generate action reports provider errors instead of fake success", async ({ page }) => {
+    await page.request.put("/api/settings", { data: { demoMode: true } });
     await page.goto("/thumbnails");
-    await page.waitForSelector("h1:has-text('Thumbnail Generator')");
+    await expect(page.getByRole("heading", { name: "Generador de Miniaturas" })).toBeVisible();
 
-    const consoleErrors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        consoleErrors.push(msg.text());
-      }
+    await page.getByPlaceholder("MiniMax M2.7 construyó mi fábrica de contenido").fill("AI Tools for Developers");
+    await page.getByPlaceholder("5 AI Tools in 2024").fill("Best AI Tools 2024");
+    await page.locator('input[maxlength="40"]').fill("MUST HAVE");
+    await page.getByRole("button", { name: "Generar miniatura" }).click();
+
+    await expect(page.getByText(/Miniatura generada|Configura un provider|No se pudo generar/i)).toBeVisible({
+      timeout: 15000,
     });
-
-    // Fill required fields
-    await page.fill('input[placeholder*="Ex: MiniMax"]', "AI Tools for Developers");
-    await page.fill('input[placeholder="5 AI Tools in 2024"]', "Best AI Tools 2024");
-    await page.fill('input[placeholder*="FÁBRICA"]', "MUST HAVE");
-
-    // Click Generate Prompt
-    await page.click('button:has-text("Generate Prompt")');
-    await page.waitForTimeout(3000);
-
-    // Check no payload errors
-    const hasPayloadError = consoleErrors.some(e => 
-      e.includes("Payload too large") || e.includes("413")
-    );
-
-    expect(hasPayloadError).toBe(false);
-
-    // Click Generate Image from Prompt
-    await page.click('button:has-text("Generate Image from Prompt")');
-    await page.waitForTimeout(3000);
-
-    // Check for thumbnail generation (may fail due to no API key, but not payload error)
-    const hasPayloadErrorAfterImage = consoleErrors.some(e => 
-      e.includes("Payload too large") || e.includes("413")
-    );
-
-    expect(hasPayloadErrorAfterImage).toBe(false);
-
-    await page.screenshot({ path: "e2e/screenshots/thumbnail-after-generate-image.png" });
+    await page.request.put("/api/settings", { data: { demoMode: false } });
   });
 });

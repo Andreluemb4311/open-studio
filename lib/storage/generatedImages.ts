@@ -8,6 +8,15 @@ function isRemoteHttpUrl(url: string) {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
+function parseDataImageUrl(url: string): { mimeType: string; buffer: Buffer } | null {
+  const match = url.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+  if (!match) return null;
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], "base64"),
+  };
+}
+
 function extensionForImage(contentType: string, url: string) {
   if (contentType.includes("webp")) return "webp";
   if (contentType.includes("png")) return "png";
@@ -28,6 +37,15 @@ export async function cacheGeneratedImageUrls(urls: string[]) {
 
   return Promise.all(
     urls.map(async (url, index) => {
+      const dataImage = parseDataImageUrl(url);
+      if (dataImage) {
+        const extension = extensionForImage(dataImage.mimeType, "");
+        const suffix = Math.random().toString(36).slice(2, 8);
+        const filename = `${timestamp}-${index}-${suffix}.${extension}`;
+        await writeFile(join(GENERATED_THUMBNAILS_DIR, filename), dataImage.buffer);
+        return `${GENERATED_THUMBNAILS_PUBLIC_PATH}/${filename}`;
+      }
+
       if (!isRemoteHttpUrl(url)) return url;
 
       try {

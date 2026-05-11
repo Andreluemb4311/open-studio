@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDefaultSettings } from "./settings";
+import { sanitizeAgentCliEnv } from "@/lib/daemon/agentConfig";
 
 describe("provider settings defaults", () => {
   it("creates local BYOK provider settings without stored keys", () => {
@@ -14,7 +15,15 @@ describe("provider settings defaults", () => {
     const settings = getDefaultSettings();
 
     expect(settings.defaults.image.model).toBe("image-01");
-    expect(settings.defaults.audio.model).toBe("music-2.6");
-    expect(settings.defaults.video.providerId).toBe("minimax");
+    expect(Object.keys(settings.defaults)).toEqual(["text", "image"]);
+  });
+
+  it("sanitizes agent CLI env to known agent keys", () => {
+    expect(
+      sanitizeAgentCliEnv({
+        codex: { CODEX_BIN: " codex ", BAD_KEY: "x" },
+        bad: { BAD_KEY: "x" },
+      })
+    ).toEqual({ codex: { CODEX_BIN: "codex" } });
   });
 });

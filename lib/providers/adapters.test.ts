@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { anthropicAdapter } from "./adapters/anthropic";
-import { elevenLabsAdapter } from "./adapters/elevenlabs";
 import { falAdapter } from "./adapters/fal";
 import { geminiAdapter } from "./adapters/gemini";
 import { minimaxAdapter } from "./adapters/minimax";
 import { openAICompatibleAdapter } from "./adapters/openaiCompatible";
+import { pollinationsAdapter } from "./adapters/pollinations";
 import { replicateAdapter } from "./adapters/replicate";
 import { getProviderManifest } from "./manifests";
 import type { ProviderRuntimeConfig, ProviderStoredConfig } from "./types";
@@ -210,35 +210,6 @@ describe("provider adapter contracts", () => {
     });
   });
 
-  it("builds ElevenLabs TTS requests and returns a data URL", async () => {
-    const fetchMock = mockFetchResponse(
-      new Response(new Uint8Array([1, 2, 3]), {
-        status: 200,
-        headers: { "Content-Type": "audio/mpeg" },
-      })
-    );
-    const config = providerConfig("elevenlabs", {
-      extra: { voiceId: "voice-test", outputFormat: "mp3_44100_128" },
-      models: { audio: "eleven-test" },
-    });
-
-    const result = await elevenLabsAdapter.generateAudio?.({ prompt: "Speak this" }, config);
-
-    const [url, init] = fetchMock.mock.calls[0] as [URL | string, RequestInit];
-    expect(String(url)).toBe(
-      "https://api.elevenlabs.io/v1/text-to-speech/voice-test?output_format=mp3_44100_128"
-    );
-    expect(init.headers).toMatchObject({
-      "xi-api-key": "test-key",
-      "Content-Type": "application/json",
-    });
-    expect(parseBody(init)).toMatchObject({
-      text: "Speak this",
-      model_id: "eleven-test",
-    });
-    expect(result?.audioUrl).toBe("data:audio/mpeg;base64,AQID");
-  });
-
   it("builds fal queued media requests and extracts returned URLs", async () => {
     const fetchMock = mockFetchResponse(
       jsonResponse({
@@ -266,6 +237,31 @@ describe("provider adapter contracts", () => {
     });
     expect(result?.urls).toEqual(["https://cdn.example/fal.png"]);
     expect(result?.jobId).toBe("fal-request");
+  });
+
+  it("builds Pollinations image requests without leaking keys in returned URLs", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([1, 2, 3]), {
+        status: 200,
+        headers: { "Content-Type": "image/png" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const config = providerConfig("pollinations", { models: { image: "flux" } });
+
+    const result = await pollinationsAdapter.generateImage?.(
+      { prompt: "Image prompt", aspectRatio: "16:9", n: 1 },
+      config
+    );
+
+    const [url, init] = fetchMock.mock.calls[0] as [URL | string, RequestInit];
+    expect(String(url)).toContain("https://gen.pollinations.ai/image/Image%20prompt");
+    expect(String(url)).toContain("model=flux");
+    expect(String(url)).not.toContain("test-key");
+    expect(init.headers).toMatchObject({
+      Authorization: "Bearer test-key",
+    });
+    expect(result?.urls[0]).toMatch(/^data:image\/png;base64,/);
   });
 
   it("builds Replicate prediction requests for owner/model slugs", async () => {

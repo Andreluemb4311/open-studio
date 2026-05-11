@@ -35,19 +35,10 @@ The thumbnail_prompt must always follow these rules:
 - PROHIBIT excess of elements.
 - Must look like a real YouTube cover, not a wallpaper.
 
-MUSIC RULES:
-The music_prompt must always follow these rules:
-- Short instrumental music for a YouTube intro (vinheta).
-- Desired duration: 10 seconds.
-- No voice.
-- No lyrics.
-- No singing.
-- Technological, modern, clean and energetic style.
-- Must work as a tech/tutorial video opening.
-- Must ask for a short intro with beginning, light build-up and clean ending.
-- Must NOT ask for long music.
-- Must NOT ask for complex full song structure.
-- Must NOT ask for lyrics.
+PACKAGE RULES:
+- Treat title and thumbnail as one delivery package.
+- Register title candidates as a future module, but do not invent a ranked CTR/SEO list yet.
+- Do not include audio, music, voiceover, or video generation fields.
 
 The JSON must use exactly this structure:
 
@@ -57,9 +48,11 @@ The JSON must use exactly this structure:
     "requirement 2"
   ],
   "script": "complete video script in Spanish",
+  "title": "working video title in Spanish",
+  "selectedTitle": "best current title in Spanish",
+  "titleCandidates": [],
   "thumbnail_prompt": "detailed visual prompt for a YouTube thumbnail",
   "thumbnail_text": "short text max 4 words in Spanish for the thumbnail",
-  "music_prompt": "short instrumental music prompt for a 10-second YouTube intro",
   "compliance_check": [
     {
       "item": "requirement checked",

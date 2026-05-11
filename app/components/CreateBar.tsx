@@ -1,14 +1,12 @@
 "use client";
 
-import { ArrowRight, FileText, Image, Music, Video, Layers } from "lucide-react";
+import { ArrowRight, FileText, Image, Layers } from "lucide-react";
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
 
 const chips = [
   { icon: FileText, labelKey: "nav.scripts" },
   { icon: Image, labelKey: "nav.thumbnails" },
-  { icon: Music, labelKey: "nav.music" },
-  { icon: Video, labelKey: "nav.video" },
   { icon: Layers, labelKey: "nav.pipeline" },
 ];
 

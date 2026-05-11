@@ -1,37 +1,40 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("MiniMax Dashboard - Smoke Tests", () => {
-  test("All pages load correctly", async ({ page }) => {
+test.describe("Open Studio smoke", () => {
+  test("active pages load without music or video routes", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Open Studio/);
-    
+
     await page.goto("/scripts");
-    await expect(page).toHaveTitle(/Script Generator/);
-    await expect(page.locator("text=Describe your video idea")).toBeVisible();
-    
+    await expect(page.getByRole("heading", { name: "Guion", exact: true })).toBeVisible();
+
     await page.goto("/thumbnails");
-    await expect(page).toHaveTitle(/Thumbnail Generator/);
-    
-    await page.goto("/music");
-    await expect(page).toHaveTitle(/Music Generator/);
-    
+    await expect(page.getByRole("heading", { name: /Miniaturas/i })).toBeVisible();
+
     await page.goto("/assets");
-    await expect(page).toHaveTitle(/Assets/);
-    
+    await expect(page.getByRole("heading", { name: "Archivos", exact: true })).toBeVisible();
+
     await page.goto("/pipeline");
-    await expect(page).toHaveTitle(/Pipeline/);
+    await expect(page.getByRole("heading", { name: "Pipeline" })).toBeVisible();
+
+    await page.goto("/content");
+    await expect(page.getByRole("heading", { name: "Títulos e legendas" })).toBeVisible();
   });
 
-  test("Navigation has correct links", async ({ page }) => {
+  test("navigation exposes only active generation surfaces", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("nav a[href='/video']")).toHaveCount(0);
     await expect(page.locator("nav a[href='/scripts']")).toBeVisible();
     await expect(page.locator("nav a[href='/thumbnails']")).toBeVisible();
-    await expect(page.locator("nav a[href='/music']")).toBeVisible();
+    await expect(page.locator("nav a[href='/pipeline']")).toBeVisible();
+    await expect(page.locator("nav a[href='/content']")).toBeVisible();
+    await expect(page.locator("nav a[href='/music']")).toHaveCount(0);
+    await expect(page.locator("nav a[href='/video']")).toHaveCount(0);
   });
 
-  test("Script page has generate button", async ({ page }) => {
-    await page.goto("/scripts");
-    await expect(page.locator("button").filter({ hasText: /Generate Script|Gerar Roteiro/i }).first()).toBeVisible();
+  test("daemon health route is available", async ({ request }) => {
+    const response = await request.get("/api/health");
+    expect(response.ok()).toBe(true);
+    const data = await response.json();
+    expect(data.capabilities).toEqual(["text", "image", "package"]);
   });
 });

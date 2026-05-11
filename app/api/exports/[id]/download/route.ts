@@ -1,45 +1,51 @@
 import { NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import { normalize, relative, resolve } from "path";
 import { getExport } from "@/lib/storage/exports";
-import { readFile, mkdir, writeFile } from "fs/promises";
-import { join, resolve } from "path";
-import { existsSync } from "fs";
+import { DATA_DIR } from "@/lib/storage/db";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+function safeDataPath(filePath: string): string {
+  const normalized = normalize(filePath);
+  if (normalized.includes("..")) throw new Error("Invalid export file path.");
+  const fullPath = resolve(DATA_DIR, normalized);
+  const rel = relative(DATA_DIR, fullPath);
+  if (rel.startsWith("..")) throw new Error("Export file path escapes storage.");
+  return fullPath;
+}
+
+type Context = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, { params }: Context) {
   const { id } = await params;
   const record = await getExport(id);
 
   if (!record) {
-    return NextResponse.json({ error: "Export not found" }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "Export not found" }, { status: 404 });
   }
 
   try {
-    const DATA_DIR = resolve(process.cwd(), "data");
-    const filesDir = join(DATA_DIR, "files");
-    const scriptsDir = join(filesDir, "scripts");
+    const files = await Promise.all(
+      record.files.map(async (file) => {
+        const content = await readFile(safeDataPath(file), "utf-8").catch(() => "");
+        return { path: file, content };
+      })
+    );
 
-    // Build a metadata file
-    const metadata = {
-      title: record.title,
-      type: record.type,
-      createdAt: record.createdAt,
-      format: record.format,
-      files: record.files,
-      pipelineStatus: record.metadata?.pipelineStatus,
+    const bundle = {
+      export: record,
+      files,
+      preparedAt: new Date().toISOString(),
     };
 
-    // Return metadata as JSON for the client to display/download
-    return NextResponse.json({
-      ok: true,
-      metadata,
-      export: record,
-      message: "Download endpoint ready. Files available at data/files/.",
+    return new Response(JSON.stringify(bundle, null, 2), {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "content-disposition": `attachment; filename="open-studio-${record.id}.json"`,
+      },
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to prepare export download", details: error instanceof Error ? error.message : "Unknown error" },
+      { ok: false, error: "Failed to prepare export download", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

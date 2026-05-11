@@ -23,7 +23,6 @@ Screenshots have not been added to the repository yet. They need to be taken fro
 | `dashboard-dark.png` | Home / dashboard overview | Dark theme |
 | `script-generator.png` | Scripts page | Show a generated script |
 | `thumbnail-generator.png` | Thumbnails page | Show generated thumbnails |
-| `music-generator.png` | Music page | Show the music player |
 | `pipeline-builder.png` | Pipeline page | Show a running pipeline |
 | `assets-library.png` | Assets page | Show asset grid |
 | `settings-api-key.png` | Settings page | Show settings form (no real key visible) |

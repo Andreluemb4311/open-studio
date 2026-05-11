@@ -4,6 +4,7 @@ import { falAdapter } from "./adapters/fal";
 import { geminiAdapter } from "./adapters/gemini";
 import { minimaxAdapter } from "./adapters/minimax";
 import { openAICompatibleAdapter } from "./adapters/openaiCompatible";
+import { pollinationsAdapter } from "./adapters/pollinations";
 import { replicateAdapter } from "./adapters/replicate";
 import { getProviderManifest, providerManifests } from "./manifests";
 import type { ProviderAdapter, ProviderCapability, ProviderManifest } from "./types";
@@ -15,6 +16,7 @@ const adapters: Record<string, ProviderAdapter> = {
   gemini: geminiAdapter,
   minimax: minimaxAdapter,
   "openai-compatible": openAICompatibleAdapter,
+  pollinations: pollinationsAdapter,
   replicate: replicateAdapter,
 };
 

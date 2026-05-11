@@ -1,6 +1,6 @@
 # Roadmap
 
-Open Studio is an early-preview project. This roadmap reflects current plans — priorities may shift based on community feedback and MiniMax API availability.
+Open Studio is an early-preview project. This roadmap reflects current plans, focused on text, image and local-first content packages.
 
 ---
 
@@ -8,8 +8,7 @@ Open Studio is an early-preview project. This roadmap reflects current plans —
 
 - [x] Script Generator (configured text provider)
 - [x] Thumbnail Generator (configured image provider)
-- [x] Music Generator (configured music provider)
-- [x] Pipeline Builder (multi-step workflows)
+- [x] Content Package Pipeline (briefing, script, title/thumbnail, export)
 - [x] Assets Library
 - [x] Exports Manager
 - [x] Settings with Test Connection
@@ -36,18 +35,18 @@ Open Studio is an early-preview project. This roadmap reflects current plans —
 
 - [ ] Persistent download history across sessions
 - [ ] Asset tagging and search improvements
-- [ ] Export .zip packages (script + thumbnail + music)
+- [ ] Export .zip packages (script + thumbnail + package metadata)
 - [ ] Asset preview modal
 - [ ] Bulk delete and bulk download
 
 ---
 
-## Phase 4 — More MiniMax tools 🗓️
+## Phase 4 — Creator intelligence 🗓️
 
-- [ ] Video generator (when MiniMax Video endpoint is available)
-- [ ] Audio/voiceover from script
-- [ ] T2A (text-to-audio) integration
-- [ ] Video workflow: script → voiceover → video
+- [ ] Generate 10 CTR/SEO title candidates from outliers
+- [ ] Rank top 3 title options
+- [ ] Caption/legenda generator using Lucas's final pattern
+- [ ] Title + thumbnail package scoring
 - [ ] Pipeline templates (quick-start for common content types)
 
 ---

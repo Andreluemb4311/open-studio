@@ -20,6 +20,14 @@ import {
 
 async function listModels(config: ProviderRuntimeConfig): Promise<string[]> {
   requireApiKey(config);
+  if (!config.manifest.modelDiscovery) {
+    return Array.from(
+      new Set([
+        ...Object.values(config.models).filter((model): model is string => Boolean(model)),
+        ...Object.values(config.manifest.modelOptions ?? {}).flat(),
+      ])
+    );
+  }
   const response = await fetch(joinUrl(config.baseUrl, "/models"), {
     headers: createBearerHeaders(config),
   });
@@ -29,6 +37,13 @@ async function listModels(config: ProviderRuntimeConfig): Promise<string[]> {
   }
 
   return extractModelIds(await response.json());
+}
+
+function withProviderQuery(url: string, config: ProviderRuntimeConfig): string {
+  if (config.providerId !== "azure-openai") return url;
+  const nextUrl = new URL(url);
+  nextUrl.searchParams.set("api-version", config.extra?.apiVersion || "2024-10-21");
+  return nextUrl.toString();
 }
 
 export const openAICompatibleAdapter: ProviderAdapter = {
@@ -60,7 +75,7 @@ export const openAICompatibleAdapter: ProviderAdapter = {
       { role: "user", content: request.prompt },
     ].filter(Boolean);
 
-    const response = await fetch(joinUrl(config.baseUrl, "/chat/completions"), {
+    const response = await fetch(withProviderQuery(joinUrl(config.baseUrl, "/chat/completions"), config), {
       method: "POST",
       headers: createBearerHeaders(config),
       body: JSON.stringify({
@@ -92,7 +107,7 @@ export const openAICompatibleAdapter: ProviderAdapter = {
     const model = getModelForCapability(config, "image", request.model);
     requireModel(model, config);
 
-    const response = await fetch(joinUrl(config.baseUrl, "/images/generations"), {
+    const response = await fetch(withProviderQuery(joinUrl(config.baseUrl, "/images/generations"), config), {
       method: "POST",
       headers: createBearerHeaders(config),
       body: JSON.stringify({

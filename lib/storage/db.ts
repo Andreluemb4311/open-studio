@@ -2,7 +2,8 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
 
-const DATA_DIR = resolve(process.cwd(), "data");
+export const DATA_DIR = resolve(process.cwd(), ".open-studio");
+const LEGACY_DATA_DIR = resolve(process.cwd(), "data");
 
 async function ensureDir(): Promise<void> {
   if (!existsSync(DATA_DIR)) {
@@ -13,10 +14,17 @@ async function ensureDir(): Promise<void> {
 export async function readDb<T>(filename: string, defaultValue: T): Promise<T> {
   await ensureDir();
   const filePath = join(DATA_DIR, filename);
+  const legacyFilePath = join(LEGACY_DATA_DIR, filename);
   try {
     if (existsSync(filePath)) {
       const data = await readFile(filePath, "utf-8");
       return JSON.parse(data);
+    }
+    if (existsSync(legacyFilePath)) {
+      const data = await readFile(legacyFilePath, "utf-8");
+      const parsed = JSON.parse(data);
+      await writeFile(filePath, JSON.stringify(parsed, null, 2), "utf-8");
+      return parsed;
     }
   } catch {
     // File doesn't exist or is corrupt, return default

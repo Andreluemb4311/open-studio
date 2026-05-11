@@ -669,16 +669,33 @@ export default function AssetsPage() {
     setUploadError("");
     try {
       const isText = file.type.startsWith("text/") || /\.(md|txt|json|csv)$/i.test(file.name);
-      const assetType: AssetRecord["type"] = file.type.startsWith("image/")
-        ? "thumbnail"
-        : file.type.startsWith("audio/")
-          ? "music"
-          : file.type.startsWith("video/")
-            ? "video"
-            : isText
-              ? "prompt"
-              : "export";
+      const isImage = file.type.startsWith("image/");
+      if (!isText && !isImage) {
+        throw new Error("Neste escopo ativo, somente imagem e texto são aceitos para upload.");
+      }
       const content = isText ? await file.text() : undefined;
+      let uploadedUrl = "";
+
+      if (isImage) {
+        const image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+          reader.readAsDataURL(file);
+        });
+        const uploadResponse = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image, filename: file.name }),
+        });
+        const uploadData = await uploadResponse.json();
+        if (!uploadResponse.ok || !uploadData.url) {
+          throw new Error(uploadData.error || "No se pudo guardar la imagen.");
+        }
+        uploadedUrl = uploadData.url;
+      }
+
+      const assetType: AssetRecord["type"] = isImage ? "thumbnail" : "prompt";
 
       const response = await fetch("/api/assets", {
         method: "POST",
@@ -688,13 +705,15 @@ export default function AssetsPage() {
           title: file.name,
           description: isText
             ? content?.slice(0, 500) || "Archivo de texto subido"
-            : "Archivo registrado desde el selector. El almacenamiento binario persistente aún no está conectado.",
+            : "Imagen subida y guardada localmente.",
           content,
+          filePath: uploadedUrl || undefined,
+          thumbnailPath: uploadedUrl || undefined,
           metadata: {
             originalName: file.name,
             mimeType: file.type || "unknown",
             size: file.size,
-            uploadMode: isText ? "persisted-text-content" : "registered-metadata-only",
+            uploadMode: isText ? "persisted-text-content" : "persisted-local-image",
           },
           sourceModule: "assets-upload",
           tags: ["Upload"],
@@ -704,7 +723,7 @@ export default function AssetsPage() {
       if (!data.ok) throw new Error(data.error || "Upload failed");
       setAssets((current) => [data.asset, ...current]);
       setUploadModalOpen(false);
-      showMessage(isText ? "Archivo subido" : "Archivo registrado. Binarios completos quedan pendientes de backend.");
+      showMessage(isText ? "Archivo subido" : "Imagen subida");
     } catch (uploadError) {
       setUploadError(uploadError instanceof Error ? uploadError.message : "No se pudo subir el archivo.");
     } finally {
@@ -713,7 +732,7 @@ export default function AssetsPage() {
     }
   }
 
-  const typeOrder: AssetTypeFilter[] = ["all", "script", "thumbnail", "music", "video", "export", "prompt"];
+  const typeOrder: AssetTypeFilter[] = ["all", "script", "thumbnail", "export", "prompt"];
 
   return (
     <main className="flex min-h-0 flex-1 overflow-hidden bg-canvas text-ink">
@@ -1038,12 +1057,12 @@ export default function AssetsPage() {
           <div className="space-y-4 p-5">
             <div className="rounded-[12px] border border-dashed border-line bg-card-hi/50 p-6 text-center">
               <Upload className="mx-auto h-8 w-8 text-accent" />
-              <p className="mt-3 text-[13px] font-semibold text-ink">Selecciona imagen, video, audio o documento</p>
-              <p className="mt-2 text-[12px] leading-5 text-ink-3">Los archivos de texto se guardan con contenido. Binarios se registran con metadatos hasta conectar almacenamiento persistente.</p>
+              <p className="mt-3 text-[13px] font-semibold text-ink">Selecciona imagen o documento de texto</p>
+              <p className="mt-2 text-[12px] leading-5 text-ink-3">Texto e imágenes se guardan como assets locales. Audio y video salen del alcance activo.</p>
               <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-4 h-10 rounded-[8px] bg-accent px-4 text-[13px] font-semibold text-accent-fg">
                 Elegir archivo
               </button>
-              <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.txt,.md,.json,.csv" onChange={handleFileUpload} />
+              <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.txt,.md,.json,.csv" onChange={handleFileUpload} />
             </div>
             {uploading ? <p className="flex items-center gap-2 text-[12px] text-ink-2"><Loader2 className="h-4 w-4 animate-spin" /> Subiendo...</p> : null}
             {uploadError ? <p className="text-[12px] text-danger">{uploadError}</p> : null}

@@ -25,18 +25,10 @@ Return a JSON object with:
     "style": "visual style",
     "text": "thumbnail text"
   },
-  "musicRequirements": {
-    "mood": "mood",
-    "genre": "genre",
-    "tempo": "tempo",
-    "duration": "duration",
-    "instruments": "instruments"
+  "packageRequirements": {
+    "titleAndThumbnailMustMatch": true,
+    "registeredFutureModules": ["10 CTR/SEO title candidates", "captions generator"]
   },
-  "videoRequirements": {
-    "prompt": "video generation prompt",
-    "duration": "duration in seconds",
-    "style": "visual style"
-  },
-  "steps": ["script", "thumbnail", "music", "video"]
+  "steps": ["script", "thumbnail", "export"]
 }`;
 }

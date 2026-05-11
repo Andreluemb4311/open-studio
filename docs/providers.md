@@ -42,7 +42,7 @@ Use three layers:
 3. Real-key smoke test, only when a key is available:
    - Add one provider key in Settings or `.env.local`.
    - Use Settings -> Test Connection.
-   - Generate one small text/image/audio sample with `saveToAssets=false` where possible.
+   - Generate one small text/image sample with `saveToAssets=false` where possible.
    - Confirm no API key appears in the browser response, console, or saved asset metadata.
 
 ## Environment Variables

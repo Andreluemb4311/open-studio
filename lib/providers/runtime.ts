@@ -1,6 +1,6 @@
 import { getSettings } from "@/lib/storage/settings";
 import { getProviderManifest } from "./manifests";
-import type { ProviderCapability, ProviderRuntimeConfig } from "./types";
+import type { ActiveProviderCapability, ProviderRuntimeConfig } from "./types";
 
 export interface ProviderOverride {
   providerId?: string;
@@ -8,7 +8,7 @@ export interface ProviderOverride {
 }
 
 export async function resolveProviderConfig(
-  capability: ProviderCapability,
+  capability: ActiveProviderCapability,
   override?: ProviderOverride
 ): Promise<ProviderRuntimeConfig> {
   const settings = await getSettings();

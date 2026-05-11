@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { MoreHorizontal, Play, FileText, Music, Image, Video } from "lucide-react";
 import { AudioWaveform } from "./AudioWaveform";
 
@@ -11,7 +12,6 @@ interface AssetCardProps {
   time: string;
   duration?: string;
   imageUrl?: string;
-  gradient?: string;
 }
 
 const typeConfig = {
@@ -21,7 +21,7 @@ const typeConfig = {
   video: { icon: Video, label: "Video", color: "#38BDF8" },
 };
 
-export function AssetCard({ title, type, time, duration, imageUrl, gradient }: AssetCardProps) {
+export function AssetCard({ title, type, time, duration, imageUrl }: AssetCardProps) {
   const config = typeConfig[type];
   const Icon = config.icon;
 
@@ -55,11 +55,13 @@ export function AssetCard({ title, type, time, duration, imageUrl, gradient }: A
     if (type === "thumbnail" || type === "video") {
       return (
         <div className="w-full h-[140px] relative overflow-hidden">
-          <img
+          {imageUrl ? <NextImage
             src={imageUrl}
             alt={title}
-            className="w-full h-full object-cover"
-          />
+            fill
+            className="object-cover"
+            unoptimized
+          /> : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
           {type === "thumbnail" && (
             <span className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-sm text-[10px] text-white font-medium">

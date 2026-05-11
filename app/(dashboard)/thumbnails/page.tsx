@@ -346,7 +346,7 @@ export default function ThumbnailGeneratorPage() {
     setError("");
 
     try {
-      const response = await fetch("/api/minimax/image", {
+      const response = await fetch("/api/generate/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

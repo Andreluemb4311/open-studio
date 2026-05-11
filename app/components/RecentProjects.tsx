@@ -2,24 +2,21 @@
 
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { AssetRecord } from "@/lib/minimax/types";
 
-const projects = [
-  {
-    title: "Thumbnail - Split-frame YouTube",
-    time: "4h ago",
-    artwork: "copper",
-  },
-  {
-    title: "Script - Improve this tone",
-    time: "4h ago",
-    artwork: "blueSphere",
-  },
-  {
-    title: "Script - IDEA: Quiero un vídeo sobre...",
-    time: "4h ago",
-    artwork: "roseCopper",
-  },
-];
+function relativeTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Reciente";
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 60) return "Agora";
+  if (hours < 24) return `${hours}h`;
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString();
+}
 
 function ProjectArtwork({ type }: { type: string }) {
   if (type === "copper") {
@@ -56,6 +53,21 @@ function ProjectArtwork({ type }: { type: string }) {
 }
 
 export function RecentProjects() {
+  const [projects, setProjects] = useState<AssetRecord[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/assets?limit=3")
+      .then((response) => response.json())
+      .then((data) => {
+        if (active && data.ok) setProjects(data.assets);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <section className="flex w-full flex-1 flex-col" aria-labelledby="recent-projects-title">
       <div className="mb-[19px] flex items-center justify-between">
@@ -71,13 +83,27 @@ export function RecentProjects() {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-[18px] sm:grid-cols-3">
-        {projects.map((project) => (
+        {projects.length === 0 ? (
+          <div className="col-span-full grid min-h-[220px] place-items-center rounded-[12px] border border-white/[0.075] bg-[#151516] px-6 text-center">
+            <div>
+              <p className="text-[14px] font-semibold text-[#F5F2F4]">Ainda sem assets reais</p>
+              <p className="mt-2 max-w-[42ch] text-[13px] leading-5 text-[#7C818F]">
+                Gere um guion, miniatura ou pacote para ver o histórico aqui.
+              </p>
+            </div>
+          </div>
+        ) : projects.map((project, index) => (
           <div
-            key={project.title}
+            key={project.id}
             className="group flex flex-col overflow-hidden rounded-[12px] border border-white/[0.075] bg-[#151516] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[rgba(208,111,167,0.22)]"
           >
             <div className="relative min-h-[130px] flex-1 overflow-hidden">
-              <ProjectArtwork type={project.artwork} />
+              {project.thumbnailPath ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={project.thumbnailPath} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <ProjectArtwork type={["copper", "blueSphere", "roseCopper"][index] ?? "roseCopper"} />
+              )}
             </div>
 
             <div className="flex min-h-[85px] items-start justify-between px-[16px] pb-[16px] pt-[16px]">
@@ -85,7 +111,7 @@ export function RecentProjects() {
                 <p className="truncate text-[14px] font-semibold leading-[1.25] text-[#F5F2F4] transition-colors duration-150 group-hover:text-accent">
                   {project.title}
                 </p>
-                <p className="mt-[14px] text-[13px] leading-none text-[#7C818F]">{project.time}</p>
+                <p className="mt-[14px] text-[13px] leading-none text-[#7C818F]">{relativeTime(project.updatedAt)}</p>
               </div>
               <button
                 className="ml-2 mt-[28px] rounded-md p-1 text-[#A2A7B3] transition-colors duration-150 hover:bg-white/[0.05] hover:text-[#F5F2F4]"

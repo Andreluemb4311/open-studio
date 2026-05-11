@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = Number(process.env.PLAYWRIGHT_PORT ?? 3107);
+const host = process.env.PLAYWRIGHT_HOST ?? "127.0.0.1";
+const baseURL = `http://${host}:${port}`;
+const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_SERVER === "true";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false, // Sequential to avoid rate limiting
@@ -8,7 +13,7 @@ export default defineConfig({
   workers: 1, // Single worker to avoid API rate limits
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -20,9 +25,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    command: `npm run dev -- --hostname ${host} --port ${port}`,
+    url: baseURL,
+    reuseExistingServer,
     timeout: 120000,
   },
 });

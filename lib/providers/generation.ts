@@ -1,19 +1,16 @@
 import { createAsset } from "@/lib/storage/assets";
 import { createExport } from "@/lib/storage/exports";
+import { cacheGeneratedImageUrls } from "@/lib/storage/generatedImages";
 import { saveContentFile } from "@/lib/minimax/files";
 import { buildThumbnailPrompt } from "@/lib/prompts/thumbnailPrompt";
 import { getAdapterForProvider } from "./registry";
 import { isDemoModeEnabled, resolveProviderConfig, type ProviderOverride } from "./runtime";
 import type {
-  AudioGenerationRequest,
-  AudioGenerationResult,
+  ActiveProviderCapability,
   ImageGenerationRequest,
   ImageGenerationResult,
-  ProviderCapability,
   TextGenerationRequest,
   TextGenerationResult,
-  VideoGenerationRequest,
-  VideoGenerationResult,
 } from "./types";
 
 const packageSystemPrompt = `You are Open Studio's content package planner.
@@ -24,10 +21,10 @@ Return only valid JSON with this shape:
   "script": "ready-to-record script",
   "description": "platform-ready description",
   "tags": ["tag"],
+  "titleCandidates": [],
+  "selectedTitle": "",
   "thumbnailPrompt": "visual prompt for image generation",
   "thumbnailText": "short readable thumbnail text",
-  "audioPrompt": "music or voiceover prompt",
-  "videoPrompt": "short video generation prompt",
   "assumptions": ["short assumption"]
 }`;
 
@@ -44,10 +41,10 @@ function parseJsonObject(content: string): Record<string, unknown> {
       script: content,
       description: "",
       tags: [],
+      titleCandidates: [],
+      selectedTitle: "",
       thumbnailPrompt: content.slice(0, 500),
       thumbnailText: "New Video",
-      audioPrompt: "Short modern instrumental intro music",
-      videoPrompt: content.slice(0, 500),
       assumptions: ["The provider returned plain text instead of JSON."],
     };
   }
@@ -92,51 +89,10 @@ export async function generateImageWithProvider(
   return adapter.generateImage(request, config);
 }
 
-export async function generateAudioWithProvider(
-  request: AudioGenerationRequest,
-  override?: ProviderOverride
-): Promise<AudioGenerationResult> {
-  if (await isDemoModeEnabled()) {
-    return {
-      audioUrl: "",
-      rawData: "",
-      error: "",
-      providerId: override?.providerId || "demo",
-      model: override?.model || "demo-audio",
-      jobId: "demo-audio",
-    };
-  }
-
-  const config = await resolveProviderConfig("audio", override);
-  const adapter = getAdapterForProvider(config.providerId);
-  if (!adapter.generateAudio) throw new Error(`${config.manifest.name} does not support audio generation.`);
-  return adapter.generateAudio(request, config);
-}
-
-export async function generateVideoWithProvider(
-  request: VideoGenerationRequest,
-  override?: ProviderOverride
-): Promise<VideoGenerationResult> {
-  if (await isDemoModeEnabled()) {
-    return {
-      jobId: `demo-video-${Date.now()}`,
-      status: "completed",
-      outputUrl: "https://placehold.co/1920x1080/151922/ff5aa7?text=Open+Studio+Video",
-      providerId: override?.providerId || "demo",
-      model: override?.model || "demo-video",
-    };
-  }
-
-  const config = await resolveProviderConfig("video", override);
-  const adapter = getAdapterForProvider(config.providerId);
-  if (!adapter.generateVideo) throw new Error(`${config.manifest.name} does not support video generation.`);
-  return adapter.generateVideo(request, config);
-}
-
 export async function generateContentPackage(params: {
   briefing: string;
-  steps?: ProviderCapability[];
-  providers?: Partial<Record<ProviderCapability, ProviderOverride>>;
+  steps?: ActiveProviderCapability[];
+  providers?: Partial<Record<ActiveProviderCapability, ProviderOverride>>;
   saveToAssets?: boolean;
 }): Promise<Record<string, unknown>> {
   const { briefing, steps = ["text", "image"], providers = {}, saveToAssets = true } = params;
@@ -152,18 +108,21 @@ export async function generateContentPackage(params: {
 
   const packageData = parseJsonObject(textResult.content);
   const title = String(packageData.title || `Open Studio - ${briefing.slice(0, 50)}`);
+  const selectedTitle = String(packageData.selectedTitle || title);
   const script = String(packageData.script || textResult.content);
   const exportFiles: string[] = [];
   const outputs: Record<string, unknown> = {
     text: {
       ...packageData,
+      selectedTitle,
       providerId: textResult.providerId,
       model: textResult.model,
     },
   };
 
   if (saveToAssets && script) {
-    const filename = `${Date.now()}-open-studio-package-script.md`;
+    const timestamp = Date.now();
+    const filename = `${timestamp}-open-studio-package-script.md`;
     await saveContentFile("scripts", filename, script);
     const filePath = `files/scripts/${filename}`;
     exportFiles.push(filePath);
@@ -193,46 +152,62 @@ export async function generateContentPackage(params: {
       { prompt: thumbnailPrompt, aspectRatio: "16:9", n: 1 },
       providers.image
     );
-    outputs.image = imageResult;
+    const cachedUrls = await cacheGeneratedImageUrls(imageResult.urls);
+    const cachedImageResult = {
+      ...imageResult,
+      urls: cachedUrls,
+      rawUrls: imageResult.urls,
+    };
+    outputs.image = cachedImageResult;
 
-    if (saveToAssets && imageResult.urls[0]) {
+    if (saveToAssets && cachedImageResult.urls[0]) {
       await createAsset({
         type: "thumbnail",
-        title: `Thumbnail - ${title}`,
+        title: `Thumbnail - ${selectedTitle}`,
         description: thumbnailPrompt,
-        thumbnailPath: imageResult.urls[0],
-        metadata: imageResult as unknown as Record<string, unknown>,
+        thumbnailPath: cachedImageResult.urls[0],
+        metadata: cachedImageResult as unknown as Record<string, unknown>,
         sourceModule: "package-generator",
         tags: ["package", "thumbnail"],
       });
     }
   }
 
-  if (steps.includes("audio")) {
-    const audioResult = await generateAudioWithProvider(
-      { prompt: String(packageData.audioPrompt || "Short modern instrumental intro music") },
-      providers.audio
-    );
-    outputs.audio = audioResult;
+  const packageJson = {
+    title,
+    selectedTitle,
+    briefing,
+    script,
+    description: String(packageData.description || ""),
+    tags: Array.isArray(packageData.tags) ? packageData.tags.map(String) : [],
+    titleCandidates: Array.isArray(packageData.titleCandidates) ? packageData.titleCandidates : [],
+    thumbnailPrompt: String(packageData.thumbnailPrompt || ""),
+    thumbnailText: String(packageData.thumbnailText || ""),
+    outputs,
+  };
 
-    if (saveToAssets && audioResult.audioUrl) {
-      await createAsset({
-        type: "music",
-        title: `Audio - ${title}`,
-        description: String(packageData.audioPrompt || ""),
-        filePath: audioResult.audioUrl,
-        metadata: audioResult as unknown as Record<string, unknown>,
-        sourceModule: "package-generator",
-        tags: ["package", "audio"],
-      });
-    }
-  }
-
-  if (steps.includes("video")) {
-    outputs.video = await generateVideoWithProvider(
-      { prompt: String(packageData.videoPrompt || briefing), duration: 5 },
-      providers.video
+  if (saveToAssets) {
+    const timestamp = Date.now();
+    const jsonFilename = `${timestamp}-content-package.json`;
+    const mdFilename = `${timestamp}-content-package.md`;
+    await saveContentFile("packages", jsonFilename, JSON.stringify(packageJson, null, 2));
+    await saveContentFile(
+      "exports",
+      mdFilename,
+      [
+        `# ${selectedTitle}`,
+        "",
+        "## Briefing",
+        briefing,
+        "",
+        "## Script",
+        script,
+        "",
+        "## Thumbnail",
+        String(packageData.thumbnailPrompt || ""),
+      ].join("\n")
     );
+    exportFiles.push(`files/packages/${jsonFilename}`, `files/exports/${mdFilename}`);
   }
 
   const exportRecord = saveToAssets
@@ -250,7 +225,9 @@ export async function generateContentPackage(params: {
   return {
     ok: true,
     title,
+    selectedTitle,
     briefing,
+    package: packageJson,
     outputs,
     exportId: exportRecord?.id,
   };

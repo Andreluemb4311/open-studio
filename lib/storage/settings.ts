@@ -1,16 +1,24 @@
 import { providerManifests, createDefaultProviderConfig } from "@/lib/providers/manifests";
-import type { ProviderCapability, ProviderDefaults, ProviderStoredConfig } from "@/lib/providers/types";
+import type { ActiveProviderCapability, ProviderDefaults, ProviderStoredConfig } from "@/lib/providers/types";
+import { sanitizeAgentCliEnv } from "@/lib/daemon/agentConfig";
 import { readDb, writeDb } from "./db";
 
 export interface AppSettings {
   providers: Record<string, ProviderStoredConfig>;
   defaults: ProviderDefaults;
+  executionMode: "cli" | "byok";
+  agentId: string | null;
+  agentModels: Record<string, { model?: string; reasoning?: string }>;
+  agentCliEnv: Record<string, Record<string, string>>;
+  mediaProviders: Record<string, { apiKey?: string; baseUrl?: string; model?: string; apiKeyTail?: string; apiKeyConfigured?: boolean }>;
   demoMode: boolean;
   debugMode: boolean;
   exportDirectory: string;
   language: "en" | "pt" | "es";
   updatedAt: string;
 }
+
+type MediaProviderStoredConfig = AppSettings["mediaProviders"][string];
 
 type LegacySettings = Partial<AppSettings> & {
   apiKey?: string;
@@ -27,8 +35,6 @@ type LegacySettings = Partial<AppSettings> & {
 const capabilityDefaults: ProviderDefaults = {
   text: { providerId: "minimax", model: "MiniMax-M2.7" },
   image: { providerId: "minimax", model: "image-01" },
-  audio: { providerId: "minimax", model: "music-2.6" },
-  video: { providerId: "minimax", model: "" },
 };
 
 const envKeyMap: Record<string, string | undefined> = {
@@ -40,8 +46,15 @@ const envKeyMap: Record<string, string | undefined> = {
   anthropic: process.env.ANTHROPIC_API_KEY,
   gemini: process.env.GEMINI_API_KEY,
   fal: process.env.FAL_KEY,
+  pollinations: process.env.POLLINATIONS_API_KEY,
   replicate: process.env.REPLICATE_API_TOKEN,
-  elevenlabs: process.env.ELEVENLABS_API_KEY,
+  openai: process.env.OPENAI_API_KEY,
+  "azure-openai": process.env.AZURE_OPENAI_API_KEY,
+  deepseek: process.env.DEEPSEEK_API_KEY,
+  ollama: process.env.OLLAMA_API_KEY,
+  "lm-studio": process.env.LM_STUDIO_API_KEY,
+  vllm: process.env.VLLM_API_KEY,
+  "local-openai": process.env.LOCAL_OPENAI_API_KEY,
 };
 
 const envBaseUrlMap: Record<string, string | undefined> = {
@@ -53,8 +66,15 @@ const envBaseUrlMap: Record<string, string | undefined> = {
   anthropic: process.env.ANTHROPIC_BASE_URL,
   gemini: process.env.GEMINI_BASE_URL,
   fal: process.env.FAL_BASE_URL,
+  pollinations: process.env.POLLINATIONS_BASE_URL,
   replicate: process.env.REPLICATE_BASE_URL,
-  elevenlabs: process.env.ELEVENLABS_BASE_URL,
+  openai: process.env.OPENAI_BASE_URL,
+  "azure-openai": process.env.AZURE_OPENAI_BASE_URL,
+  deepseek: process.env.DEEPSEEK_BASE_URL,
+  ollama: process.env.OLLAMA_BASE_URL,
+  "lm-studio": process.env.LM_STUDIO_BASE_URL,
+  vllm: process.env.VLLM_BASE_URL,
+  "local-openai": process.env.LOCAL_OPENAI_BASE_URL,
 };
 
 function defaultProviders(): Record<string, ProviderStoredConfig> {
@@ -87,11 +107,32 @@ function mergeProviderConfig(
   };
 }
 
+function mergeMediaProviderConfig(
+  current: Record<string, MediaProviderStoredConfig>,
+  incoming?: Record<string, MediaProviderStoredConfig>
+): Record<string, MediaProviderStoredConfig> {
+  if (!incoming) return current;
+  const next = { ...current };
+
+  for (const [providerId, config] of Object.entries(incoming)) {
+    const previous = next[providerId] ?? {};
+    next[providerId] = {
+      ...previous,
+      ...config,
+      apiKey: config.apiKey?.trim() ? config.apiKey : previous.apiKey,
+      apiKeyTail: config.apiKey?.trim() ? config.apiKey.slice(-4) : config.apiKeyTail ?? previous.apiKeyTail,
+      apiKeyConfigured: Boolean(config.apiKey?.trim()) || config.apiKeyConfigured || previous.apiKeyConfigured,
+    };
+  }
+
+  return next;
+}
+
 function normalizeCapabilityDefault(
-  capability: ProviderCapability,
+  capability: ActiveProviderCapability,
   defaults: ProviderDefaults,
   providers: Record<string, ProviderStoredConfig>
-): ProviderDefaults[ProviderCapability] {
+): ProviderDefaults[ActiveProviderCapability] {
   const selected = defaults[capability] ?? capabilityDefaults[capability];
   const provider = providers[selected.providerId] ? selected.providerId : capabilityDefaults[capability].providerId;
   const model =
@@ -138,8 +179,6 @@ function migrateSettings(fileSettings: LegacySettings): AppSettings {
       models: {
         text: manifest.id === "minimax" ? process.env.MINIMAX_TEXT_MODEL : undefined,
         image: manifest.id === "minimax" ? process.env.MINIMAX_IMAGE_MODEL : undefined,
-        audio: manifest.id === "minimax" ? process.env.MINIMAX_MUSIC_MODEL : undefined,
-        video: manifest.id === "minimax" ? process.env.MINIMAX_VIDEO_MODEL : undefined,
       },
     });
   }
@@ -148,13 +187,16 @@ function migrateSettings(fileSettings: LegacySettings): AppSettings {
   const defaults: ProviderDefaults = {
     text: normalizeCapabilityDefault("text", incomingDefaults, providers),
     image: normalizeCapabilityDefault("image", incomingDefaults, providers),
-    audio: normalizeCapabilityDefault("audio", incomingDefaults, providers),
-    video: normalizeCapabilityDefault("video", incomingDefaults, providers),
   };
 
   return {
     providers,
     defaults,
+    executionMode: fileSettings.executionMode ?? "byok",
+    agentId: fileSettings.agentId ?? null,
+    agentModels: fileSettings.agentModels ?? {},
+    agentCliEnv: sanitizeAgentCliEnv(fileSettings.agentCliEnv),
+    mediaProviders: fileSettings.mediaProviders ?? {},
     demoMode:
       process.env.NEXT_PUBLIC_DEMO_MODE === "true" ||
       fileSettings.demoMode === true,
@@ -190,9 +232,12 @@ function mergeSettings(current: AppSettings, partial: Partial<AppSettings>): App
     defaults: {
       text: normalizeCapabilityDefault("text", defaults, providers),
       image: normalizeCapabilityDefault("image", defaults, providers),
-      audio: normalizeCapabilityDefault("audio", defaults, providers),
-      video: normalizeCapabilityDefault("video", defaults, providers),
     },
+    executionMode: partial.executionMode ?? current.executionMode,
+    agentId: partial.agentId === undefined ? current.agentId : partial.agentId,
+    agentModels: partial.agentModels ? { ...current.agentModels, ...partial.agentModels } : current.agentModels,
+    agentCliEnv: partial.agentCliEnv === undefined ? current.agentCliEnv : sanitizeAgentCliEnv(partial.agentCliEnv),
+    mediaProviders: mergeMediaProviderConfig(current.mediaProviders, partial.mediaProviders),
     updatedAt: new Date().toISOString(),
   };
 }

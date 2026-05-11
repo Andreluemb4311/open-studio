@@ -1,4 +1,8 @@
-export type ProviderCapability = "text" | "image" | "audio" | "video";
+export type ActiveProviderCapability = "text" | "image";
+export type LegacyProviderCapability = "audio" | "video";
+export type ProviderCapability = ActiveProviderCapability | LegacyProviderCapability;
+
+export const activeProviderCapabilities: ActiveProviderCapability[] = ["text", "image"];
 
 export interface ProviderManifest {
   id: string;
@@ -8,10 +12,11 @@ export interface ProviderManifest {
   capabilities: ProviderCapability[];
   defaultBaseUrl: string;
   defaultModels: Partial<Record<ProviderCapability, string>>;
+  modelOptions?: Partial<Record<ProviderCapability, string[]>>;
   modelDiscovery: boolean;
   docsUrl: string;
   authHeader: string;
-  requiresModelFor: ProviderCapability[];
+  requiresModelFor: ActiveProviderCapability[];
   tags?: string[];
   extraDefaults?: Record<string, string>;
 }
@@ -27,7 +32,7 @@ export interface ProviderStoredConfig {
 }
 
 export type ProviderDefaults = Record<
-  ProviderCapability,
+  ActiveProviderCapability,
   {
     providerId: string;
     model: string;

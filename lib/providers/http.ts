@@ -7,11 +7,21 @@ export function joinUrl(baseUrl: string, path: string): string {
 }
 
 export function createBearerHeaders(config: ProviderRuntimeConfig): Record<string, string> {
-  return {
-    Authorization: `Bearer ${config.apiKey}`,
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...config.customHeaders,
   };
+
+  if (config.manifest.authHeader === "api-key") {
+    if (config.apiKey) headers["api-key"] = config.apiKey;
+    return headers;
+  }
+
+  if (config.manifest.authHeader !== "none" && config.apiKey) {
+    headers.Authorization = `Bearer ${config.apiKey}`;
+  }
+
+  return headers;
 }
 
 export async function readError(response: Response): Promise<string> {
@@ -76,6 +86,7 @@ export function getModelForCapability(
 }
 
 export function requireApiKey(config: ProviderRuntimeConfig): void {
+  if (config.manifest.authHeader === "none") return;
   if (!config.apiKey) {
     throw new Error(`${config.manifest.name} API key is not configured.`);
   }

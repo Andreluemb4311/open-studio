@@ -12,16 +12,18 @@ import {
   Layers,
   Menu,
   Settings,
+  TextCursorInput,
   X,
 } from "lucide-react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const navItems = [
-  { icon: Home, label: "Inicio", href: "/" },
+  { icon: Home, label: "Início", href: "/" },
   { icon: Layers, label: "Pipeline", href: "/pipeline" },
-  { icon: FileText, label: "Guiones", href: "/scripts" },
+  { icon: FileText, label: "Roteiros", href: "/scripts" },
   { icon: Image, label: "Miniaturas", href: "/thumbnails" },
-  { icon: Box, label: "Assets", href: "/assets" },
+  { icon: TextCursorInput, label: "Títulos/legendas", href: "/content" },
+  { icon: Box, label: "Arquivos", href: "/assets" },
 ];
 
 export function Sidebar() {
@@ -83,7 +85,7 @@ export function Sidebar() {
         {/* Settings */}
         <Link
           href="/settings"
-          title="Ajustes"
+          title="Configurações"
           className={`
             relative flex h-10 w-full items-center justify-center rounded-[7px]
             transition-all duration-200 ease-out

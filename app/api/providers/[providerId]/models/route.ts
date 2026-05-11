@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdapterForProvider } from "@/lib/providers/registry";
 import { resolveProviderConfig } from "@/lib/providers/runtime";
 import { getProviderManifest } from "@/lib/providers/manifests";
+import type { ActiveProviderCapability } from "@/lib/providers/types";
 
 type Context = { params: Promise<{ providerId: string }> };
 
@@ -21,7 +22,12 @@ export async function GET(_request: Request, { params }: Context) {
       });
     }
 
-    const config = await resolveProviderConfig(manifest.capabilities[0], { providerId });
+    const capability = manifest.capabilities.find((item): item is ActiveProviderCapability => item === "text" || item === "image");
+    if (!capability) {
+      return NextResponse.json({ ok: false, models: [], error: "Provider has no active capabilities" }, { status: 400 });
+    }
+
+    const config = await resolveProviderConfig(capability, { providerId });
     const adapter = getAdapterForProvider(providerId);
     const models = adapter.listModels ? await adapter.listModels(config) : [];
     return NextResponse.json({ ok: true, models });

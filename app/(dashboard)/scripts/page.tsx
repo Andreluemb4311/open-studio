@@ -25,44 +25,14 @@ type ScriptSection = {
   items?: Array<{ title: string; body: string }>;
 };
 
+type ReferenceItem = {
+  id: string;
+  title: string;
+  content: string;
+};
+
 const INITIAL_INSTRUCTIONS =
   "Crea un guion para un video de YouTube sobre hábitos de productividad para estudiantes universitarios. Tono motivacional y cercano. Incluye ejemplos prácticos.";
-
-const DEFAULT_RESULT: ScriptSection[] = [
-  {
-    title: "Gancho",
-    time: "0:00 - 0:15",
-    body:
-      "¿Sientes que nunca tienes tiempo? No estás solo. Pero la buena noticia es que la productividad no es cuestión de hacer más, sino de hacer lo correcto.",
-  },
-  {
-    title: "Introducción",
-    time: "0:15 - 0:45",
-    body:
-      "Ser estudiante universitario es emocionante, pero también desafiante. Entre clases, tareas, proyectos y vida personal, es fácil sentirse abrumado. En este video te compartiré 5 hábitos simples que pueden transformar tu manera de estudiar y aprovechar tu tiempo.",
-  },
-  {
-    title: "Desarrollo",
-    time: "0:45 - 3:30",
-    items: [
-      {
-        title: "Planifica tu día la noche anterior",
-        body:
-          "Dedica 5 minutos cada noche para revisar tus pendientes y definir tus prioridades del día siguiente. Esto reduce el estrés y te da claridad desde que te despiertas.",
-      },
-      {
-        title: "Usa bloques de tiempo",
-        body:
-          "Agrupa clases, estudio y descansos en bloques concretos. Trabajar con límites visibles hace que sea más fácil empezar y más difícil perder el foco.",
-      },
-      {
-        title: "Elimina una distracción antes de estudiar",
-        body:
-          "No necesitas cambiar toda tu rutina. Empieza silenciando notificaciones o dejando el teléfono fuera del escritorio durante el primer bloque de trabajo.",
-      },
-    ],
-  },
-];
 
 const VARIABLES = [
   ["{{TEMA}}", "Tema principal"],
@@ -76,6 +46,9 @@ const VERSIONS = [
   ["Guion - Hábitos de productividad v1", "Hace 1 día"],
   ["Guion - Primera versión", "Hace 2 días"],
 ] as const;
+
+const DEFAULT_BRAND_VOICE =
+  "Usa un lenguaje claro, directo y empático. Evita tecnicismos innecesarios y habla como si conversaras con tu audiencia.";
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -223,7 +196,10 @@ export default function ScriptGeneratorPage() {
   const [audience, setAudience] = useState("Estudiantes universitarios");
   const [duration, setDuration] = useState("3 - 5 minutos");
   const [instructions, setInstructions] = useState(INITIAL_INSTRUCTIONS);
-  const [result, setResult] = useState<ScriptSection[] | null>(DEFAULT_RESULT);
+  const [brandVoice, setBrandVoice] = useState(DEFAULT_BRAND_VOICE);
+  const [editingBrandVoice, setEditingBrandVoice] = useState(false);
+  const [references, setReferences] = useState<ReferenceItem[]>([]);
+  const [result, setResult] = useState<ScriptSection[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -247,6 +223,20 @@ export default function ScriptGeneratorPage() {
     window.setTimeout(() => setNotice(""), 2200);
   }
 
+  function resolveVariables(text: string) {
+    return text
+      .replaceAll("{{TEMA}}", topic || "tema no definido")
+      .replaceAll("{{AUDIENCIA}}", audience || "audiencia no definida")
+      .replaceAll("{{TONO}}", brandVoice || "tono no definido")
+      .replaceAll("{{DURACION}}", duration || "duración no definida");
+  }
+
+  function createReferenceId() {
+    return typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `ref-${Date.now()}`;
+  }
+
   async function handleGenerate() {
     if (!instructions.trim()) {
       setError("Agrega instrucciones para generar el guion.");
@@ -261,7 +251,11 @@ export default function ScriptGeneratorPage() {
         `TEMA: ${topic}`,
         `AUDIENCIA: ${audience}`,
         `DURACION: ${duration}`,
-        `INSTRUCCIONES: ${instructions}`,
+        `VOZ_DE_MARCA: ${brandVoice}`,
+        references.length
+          ? `REFERENCIAS:\n${references.map((reference, index) => `${index + 1}. ${reference.title}\n${reference.content}`).join("\n\n")}`
+          : "REFERENCIAS: ninguna",
+        `INSTRUCCIONES: ${resolveVariables(instructions)}`,
       ].join("\n");
 
       const response = await fetch("/api/minimax/script", {
@@ -270,26 +264,23 @@ export default function ScriptGeneratorPage() {
         body: JSON.stringify({ briefing, saveToAssets: true }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.script) {
-          setResult([
-            {
-              title: "Guion generado",
-              time: duration,
-              body: String(data.script),
-            },
-          ]);
-          showNotice("Guion generado");
-          return;
-        }
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        throw new Error(data?.details || data?.error || "No se pudo generar el guion.");
       }
 
-      setResult(DEFAULT_RESULT);
+      const script = data?.script || data?.content;
+      if (!script) throw new Error("El provider respondió sin contenido de guion.");
+      setResult([
+        {
+          title: String(data?.title || "Guion generado"),
+          time: duration,
+          body: String(script),
+        },
+      ]);
       showNotice("Guion generado");
-    } catch {
-      setResult(DEFAULT_RESULT);
-      showNotice("Guion generado");
+    } catch (generateError) {
+      setError(generateError instanceof Error ? generateError.message : "No se pudo generar el guion.");
     } finally {
       setLoading(false);
     }
@@ -301,8 +292,28 @@ export default function ScriptGeneratorPage() {
     showNotice("Copiado");
   }
 
-  function handleSave() {
-    showNotice("Guardado");
+  async function handleSave() {
+    if (!resultText.trim()) return;
+    try {
+      const response = await fetch("/api/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "script",
+          title: `Script - ${topic || "Open Studio"}`,
+          description: instructions.slice(0, 500),
+          content: resultText,
+          metadata: { objective, topic, audience, duration, brandVoice, references, savedFrom: "scripts-page" },
+          sourceModule: "script-editor",
+          tags: ["script", "saved"],
+        }),
+      });
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.error || "No se pudo guardar.");
+      showNotice("Guardado en Assets");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "No se pudo guardar el guion.");
+    }
   }
 
   function handleNewScript() {
@@ -311,6 +322,7 @@ export default function ScriptGeneratorPage() {
     setAudience("Estudiantes universitarios");
     setDuration("3 - 5 minutos");
     setInstructions("");
+    setReferences([]);
     setResult(null);
     setError("");
     showNotice("Nuevo guion listo");
@@ -318,6 +330,35 @@ export default function ScriptGeneratorPage() {
 
   function insertVariable(variable: string) {
     setInstructions((current) => `${current}${current ? " " : ""}${variable}`.slice(0, 2000));
+  }
+
+  function addCustomVariable() {
+    const name = window.prompt("Nombre de la variable. Ejemplo: CTA_FINAL");
+    if (!name?.trim()) return;
+    const token = `{{${name.trim().toUpperCase().replaceAll(/\s+/g, "_")}}}`;
+    insertVariable(token);
+    showNotice(`Variable ${token} insertada`);
+  }
+
+  function addReference() {
+    const content = window.prompt("Pega un link, nota o fragmento de guion para usar como referencia.");
+    if (!content?.trim()) return;
+    const trimmed = content.trim();
+    const isUrl = /^https?:\/\//i.test(trimmed);
+    const title = isUrl ? trimmed : `Referencia ${references.length + 1}`;
+    setReferences((current) => [
+      ...current,
+      {
+        id: createReferenceId(),
+        title,
+        content: trimmed,
+      },
+    ]);
+    showNotice("Referencia agregada");
+  }
+
+  function removeReference(referenceId: string) {
+    setReferences((current) => current.filter((reference) => reference.id !== referenceId));
   }
 
   return (
@@ -537,7 +578,7 @@ export default function ScriptGeneratorPage() {
             <SidebarCard
               title="Variables"
               action={
-                <IconButton label="Agregar variable">
+                <IconButton label="Agregar variable" onClick={addCustomVariable}>
                   <Plus className="h-4 w-4" strokeWidth={1.8} />
                 </IconButton>
               }
@@ -558,7 +599,11 @@ export default function ScriptGeneratorPage() {
                   </button>
                 ))}
               </div>
-              <button type="button" className="mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-accent transition hover:text-accent-hi">
+              <button
+                type="button"
+                onClick={() => showNotice("Variables activas: tema, audiencia, tono y duración. Las personalizadas se insertan como tokens.")}
+                className="mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-accent transition hover:text-accent-hi"
+              >
                 Ver todas las variables
                 <ChevronRight className="h-4 w-4" strokeWidth={1.8} />
               </button>
@@ -567,16 +612,27 @@ export default function ScriptGeneratorPage() {
             <SidebarCard
               title="Voz de marca"
               action={
-                <IconButton label="Editar voz de marca">
+                <IconButton label="Editar voz de marca" onClick={() => setEditingBrandVoice((current) => !current)}>
                   <Edit3 className="h-4 w-4" strokeWidth={1.8} />
                 </IconButton>
               }
             >
-              <p className="text-[13px] leading-6 text-ink-2">
-                Usa un lenguaje, tono, directo y empático. Evita tecnicismos innecesarios y habla como si conversaras con tu audiencia.
-              </p>
-              <button type="button" className="mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-accent transition hover:text-accent-hi">
-                Editar voz de marca
+              {editingBrandVoice ? (
+                <textarea
+                  value={brandVoice}
+                  onChange={(event) => setBrandVoice(event.target.value.slice(0, 800))}
+                  rows={5}
+                  className="w-full resize-y rounded-[9px] border border-line bg-card-hi px-3 py-3 text-[13px] leading-5 text-ink placeholder:text-ink-3 transition duration-200 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15"
+                />
+              ) : (
+                <p className="text-[13px] leading-6 text-ink-2">{brandVoice}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingBrandVoice((current) => !current)}
+                className="mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-accent transition hover:text-accent-hi"
+              >
+                {editingBrandVoice ? "Cerrar edición" : "Editar voz de marca"}
                 <ChevronRight className="h-4 w-4" strokeWidth={1.8} />
               </button>
             </SidebarCard>
@@ -585,8 +641,31 @@ export default function ScriptGeneratorPage() {
               <p className="text-[13px] leading-5 text-ink-2">
                 Archivos, guiones o links que querés que la IA tenga en cuenta.
               </p>
+              {references.length ? (
+                <div className="mt-4 space-y-2">
+                  {references.map((reference) => (
+                    <div
+                      key={reference.id}
+                      className="flex items-start justify-between gap-3 rounded-[8px] border border-line bg-card-hi px-3 py-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-[12px] font-semibold text-ink">{reference.title}</span>
+                        <span className="mt-1 line-clamp-2 block text-[11px] leading-4 text-ink-3">{reference.content}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeReference(reference.id)}
+                        className="shrink-0 text-[11px] font-semibold text-ink-3 transition hover:text-danger"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
+                onClick={addReference}
                 className="mt-4 inline-flex h-10 items-center gap-2 rounded-[8px] border border-line bg-white/[0.025] px-4 text-[13px] font-semibold text-ink-2 transition duration-200 hover:border-line-hi hover:bg-hover hover:text-ink"
               >
                 <Plus className="h-4 w-4" strokeWidth={1.8} />

@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { sanitizeAgentCliEnv } from "@/lib/daemon/agentConfig";
 
-const capabilitySchema = z.enum(["text", "image", "audio", "video"]);
+const capabilitySchema = z.enum(["text", "image"]);
 const providerIdSchema = z.string().min(1).max(100);
 const capabilityModelMapSchema = z.object({
   text: z.string().max(200).optional(),
@@ -32,14 +33,23 @@ const providerDefaultsSchema = z.object({
     providerId: providerIdSchema,
     model: z.string().max(200),
   }).optional(),
-  audio: z.object({
-    providerId: providerIdSchema,
-    model: z.string().max(200),
-  }).optional(),
-  video: z.object({
-    providerId: providerIdSchema,
-    model: z.string().max(200),
-  }).optional(),
+});
+
+const agentChoiceSchema = z.object({
+  model: z.string().max(200).optional(),
+  reasoning: z.string().max(80).optional(),
+});
+const agentCliEnvSchema = z.preprocess(
+  (raw) => sanitizeAgentCliEnv(raw),
+  z.record(providerIdSchema, z.record(z.string().max(100), z.string().max(1000)))
+);
+
+const mediaProviderConfigSchema = z.object({
+  apiKey: z.string().max(1000).optional(),
+  baseUrl: z.string().url().max(500).or(z.literal("")).optional(),
+  model: z.string().max(200).optional(),
+  apiKeyTail: z.string().max(40).optional(),
+  apiKeyConfigured: z.boolean().optional(),
 });
 
 // ── Settings ──────────────────────────────────────────────────────────
@@ -47,6 +57,11 @@ export const settingsSchema = z.object({
   action: z.enum(["reset", "clear_assets"]).optional(),
   providers: z.record(providerIdSchema, providerStoredConfigSchema).optional(),
   defaults: providerDefaultsSchema.optional(),
+  executionMode: z.enum(["cli", "byok"]).optional(),
+  agentId: z.string().max(100).nullable().optional(),
+  agentModels: z.record(providerIdSchema, agentChoiceSchema).optional(),
+  agentCliEnv: agentCliEnvSchema.optional(),
+  mediaProviders: z.record(providerIdSchema, mediaProviderConfigSchema).optional(),
   language: z.enum(["en", "pt", "es"]).optional(),
   // Legacy MiniMax settings are accepted for backward-compatible writes/tests.
   apiKey: z.string().max(500).optional(),
@@ -80,7 +95,7 @@ export const assetSchema = z.object({
 // ── Exports ──────────────────────────────────────────────────────────
 export const exportSchema = z.object({
   title: z.string().min(1).max(500),
-  type: z.enum(["package", "video", "music", "document"]),
+  type: z.enum(["package", "document"]),
   status: z.enum(["completed", "processing", "failed", "pending"]),
   files: z.array(z.string().max(1000)).max(100),
   progress: z.number().min(0).max(100),
@@ -166,6 +181,24 @@ export const imageProviderGenerateSchema = imageGenerateSchema.extend({
   provider: providerOverrideSchema.optional(),
 });
 
+export const titleGenerateSchema = z.object({
+  topic: z.string().min(1),
+  briefing: z.string().optional(),
+  audience: z.string().optional(),
+  thumbnailConcept: z.string().optional(),
+  outlierNotes: z.string().optional(),
+  count: z.number().int().min(3).max(20).optional().default(10),
+  provider: providerOverrideSchema.optional(),
+  saveToAssets: z.boolean().optional().default(true),
+});
+
+export const captionGenerateSchema = z.object({
+  script: z.string().min(1).max(12000),
+  pattern: z.string().max(4000).optional(),
+  provider: providerOverrideSchema.optional(),
+  saveToAssets: z.boolean().optional().default(true),
+});
+
 export const audioProviderGenerateSchema = musicGenerateSchema.extend({
   provider: providerOverrideSchema.optional(),
   voiceId: z.string().max(200).optional(),
@@ -173,12 +206,10 @@ export const audioProviderGenerateSchema = musicGenerateSchema.extend({
 
 export const packageGenerateSchema = z.object({
   briefing: z.string().min(1).max(4000),
-  steps: z.array(capabilitySchema).max(4).optional(),
+  steps: z.array(capabilitySchema).max(2).optional(),
   providers: z.object({
     text: providerOverrideSchema.optional(),
     image: providerOverrideSchema.optional(),
-    audio: providerOverrideSchema.optional(),
-    video: providerOverrideSchema.optional(),
   }).optional(),
   saveToAssets: z.boolean().optional().default(true),
 });
@@ -186,23 +217,13 @@ export const packageGenerateSchema = z.object({
 // ── Pipeline ──────────────────────────────────────────────────────────
 export const pipelineSchema = z.object({
   briefing: z.string().min(1).max(2000),
-  steps: z.array(z.enum(["script", "thumbnail", "music", "video"])).max(4).optional(),
+  steps: z.array(z.enum(["script", "thumbnail", "export"])).max(3).optional(),
   generateThumbnail: z.boolean().optional().default(false),
-  generateMusic: z.boolean().optional().default(false),
-  generateVideo: z.boolean().optional().default(false),
   thumbnailPromptParams: z.object({
     theme: z.string().max(500).optional(),
     title: z.string().max(500).optional(),
     style: z.string().max(200).optional(),
     text: z.string().max(200).optional(),
-  }).optional(),
-  musicPromptParams: z.object({
-    prompt: z.string().max(2000).optional(),
-  }).optional(),
-  videoPromptParams: z.object({
-    prompt: z.string().max(2000).optional(),
-    duration: z.string().max(20).optional(),
-    style: z.string().max(200).optional(),
   }).optional(),
 });
 
